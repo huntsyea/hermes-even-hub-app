@@ -4,6 +4,7 @@ import {
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 
 export const IDS = { header: 1, body: 2, status: 3 } as const;
+const NAMES: Record<number, string> = { [IDS.header]: "header", [IDS.body]: "body", [IDS.status]: "status" };
 
 export async function buildChatPage(bridge: EvenAppBridge): Promise<void> {
   await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({
@@ -17,5 +18,11 @@ export async function buildChatPage(bridge: EvenAppBridge): Promise<void> {
 }
 
 export async function setText(bridge: EvenAppBridge, id: number, content: string): Promise<void> {
-  await bridge.textContainerUpgrade(new TextContainerUpgrade({ containerID: id, content }));
+  await bridge.textContainerUpgrade(new TextContainerUpgrade({
+    containerID: id,
+    containerName: NAMES[id],
+    contentOffset: 0,
+    contentLength: 0,   // full replacement (glasses-ui requirement)
+    content,
+  }));
 }
