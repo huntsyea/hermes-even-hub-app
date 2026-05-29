@@ -1,0 +1,28 @@
+{
+  "name": "even-development",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "sim": "evenhub-simulator http://localhost:5173 --automation-port 9898",
+    "sim:glow": "evenhub-simulator http://localhost:5173 --automation-port 9898 --glow",
+    "sim:check": "node scripts/smoke-sim.mjs",
+    "qr": "evenhub qr --url http://localhost:5173",
+    "pack": "npm run build && evenhub pack app.json dist -o even-development.ehpk",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "^0.1.13",
+    "@evenrealities/evenhub-simulator": "^0.7.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.12",
+    "vitest": "^4.1.7"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "^0.0.10"
+  }
+}
