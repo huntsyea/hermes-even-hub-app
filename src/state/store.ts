@@ -44,7 +44,7 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
     case "tool.end":
       return { ...s, chat: { ...s.chat, tool: s.chat.tool ? { ...s.chat.tool, running: false } : undefined } };
     case "turn.done":
-      return { ...s, chat: { ...s.chat, done: true } };
+      return { ...s, chat: { ...s.chat, done: true, tool: undefined } };
     case "error":
       return { ...s, conn: `error: ${m.msg}` };
     default:

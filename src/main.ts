@@ -26,6 +26,7 @@ async function boot(): Promise<void> {
     onScrollUp: () => {},
     onScrollDown: () => {},
   }));
+  console.log("[glasses] ready");
 }
 
 boot().catch((err) => console.error("[glasses] boot failed", err));

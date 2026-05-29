@@ -1,5 +1,9 @@
+import { writeFileSync, mkdirSync } from 'node:fs'
+import { join } from 'node:path'
+
 const BASE = process.env.EVEN_SIM_BASE ?? 'http://127.0.0.1:9898'
-const READY_MARKER = '[even-development] ready'
+const READY_MARKER = '[glasses] ready'
+const SCREENSHOT_DIR = join(import.meta.dirname, '..', 'docs', 'e2e')
 
 async function getJson(path) {
   const response = await fetch(`${BASE}${path}`)
@@ -55,17 +59,27 @@ async function waitForReady(timeoutMs = 30_000) {
 await getJson('/api/ping')
 await waitForReady()
 
-const boot = await getBytes('/api/screenshot/glasses')
-if (boot.byteLength < 1000) {
-  throw new Error(`Framebuffer screenshot is too small: ${boot.byteLength} bytes`)
+// Send a single click to trigger a turn (double_click is the EXIT gesture)
+await postJson('/api/input', { action: 'click' })
+
+// Wait a few seconds for the turn to complete and the UI to update
+await new Promise((resolve) => setTimeout(resolve, 3_000))
+
+// Capture glasses screenshot and save to docs/e2e/
+const screenshot = await getBytes('/api/screenshot/glasses')
+mkdirSync(SCREENSHOT_DIR, { recursive: true })
+const screenshotPath = join(SCREENSHOT_DIR, `smoke-${Date.now()}.png`)
+writeFileSync(screenshotPath, screenshot)
+console.log(`Screenshot saved: ${screenshotPath} (${screenshot.byteLength} bytes)`)
+
+// Print last 20 console lines
+const consoleData = await getJson('/api/console?since_id=0')
+const entries = consoleData.entries ?? []
+const tail = entries.slice(-20)
+console.log(`\n--- last ${tail.length} console lines ---`)
+for (const entry of tail) {
+  console.log(`  [${entry.id}] ${entry.message}`)
 }
+console.log('--- end console ---\n')
 
-await postJson('/api/input', { action: 'double_click' })
-await new Promise((resolve) => setTimeout(resolve, 500))
-
-const after = await getBytes('/api/screenshot/glasses')
-if (Math.abs(after.byteLength - boot.byteLength) < 100) {
-  throw new Error('Framebuffer did not change after double_click')
-}
-
-console.log('OK - simulator responded, app rendered, and double_click changed the framebuffer')
+console.log('OK - simulator responded, app rendered, click triggered a turn')

@@ -33,4 +33,11 @@ describe("store", () => {
     const s = reduce(initialState(), { t: "turn.done" });
     expect(s.chat.done).toBe(true);
   });
+  it("turn.done clears the tool indicator so status can reach done", () => {
+    let s = reduce(initialState(), { t: "tool.start", name: "terminal", emoji: "⚙" });
+    s = reduce(s, { t: "tool.end", name: "terminal", ok: true });
+    s = reduce(s, { t: "turn.done" });
+    expect(s.chat.done).toBe(true);
+    expect(s.chat.tool).toBeUndefined();
+  });
 });
