@@ -43,6 +43,9 @@ export const textMsg = (text: string) => JSON.stringify({ t: "text", text });
 
 export const stopMsg = () => JSON.stringify({ t: "stop" });
 
+export const audioStart = () => JSON.stringify({ t: "audio.start" });
+export const audioStop = () => JSON.stringify({ t: "audio.stop" });
+
 export function parseServer(raw: string): ServerMsg {
   const m = JSON.parse(raw);
   if (!m || typeof m.t !== "string" || !SERVER_TYPES.has(m.t))

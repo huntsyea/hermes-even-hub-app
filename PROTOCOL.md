@@ -30,7 +30,7 @@ Discriminator field: `t` (string, required on every frame)
 | `active`     | `id: string`                                                    | Notifies the client which session is now active (after switch or new). |
 | `transcript` | `text: string`                                                  | A transcription chunk of user speech. |
 | `assistant`  | `text: string`                                                  | **Full accumulated assistant text so far.** The client MUST replace (not append) its displayed body with this value each time it arrives. The bridge accumulates deltas and always emits the running total. |
-| `tool.start` | `name: string`, `label?: string`, `emoji?: string`              | A tool invocation has started. |
+| `tool.start` | `name: string`, `label?: string`, `emoji?: string`              | A tool invocation has started. `label` and `emoji` are optional and omitted from the frame when empty. |
 | `tool.end`   | `name: string`, `ok: boolean`                                   | A tool invocation completed. `ok=false` indicates failure. |
 | `turn.done`  | _(none)_                                                        | The assistant turn is complete; no further `assistant` or `tool.*` frames will arrive for this turn. |
 | `error`      | `msg: string`                                                   | An error occurred on the server side. |

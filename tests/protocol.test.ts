@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hello, parseServer } from "../src/protocol";
+import { hello, parseServer, audioStart, audioStop } from "../src/protocol";
 
 describe("protocol", () => {
   it("builds a hello frame", () => {
@@ -11,5 +11,9 @@ describe("protocol", () => {
   });
   it("rejects unknown types", () => {
     expect(() => parseServer(JSON.stringify({ t: "nope" }))).toThrow();
+  });
+  it("builds audio control frames", () => {
+    expect(JSON.parse(audioStart())).toEqual({ t: "audio.start" });
+    expect(JSON.parse(audioStop())).toEqual({ t: "audio.stop" });
   });
 });
