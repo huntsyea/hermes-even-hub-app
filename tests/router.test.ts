@@ -81,6 +81,12 @@ describe("routeEvent", () => {
     expect(a.onClick).not.toHaveBeenCalled();
   });
 
+  it("passes the list selected index to onClick", () => {
+    const a = { onClick: vi.fn(), onDoubleClick: vi.fn(), onScrollUp: vi.fn(), onScrollDown: vi.fn() };
+    routeEvent({ listEvent: { eventType: OsEventTypeList.CLICK_EVENT, currentSelectItemIndex: 2 } } as any, a);
+    expect(a.onClick).toHaveBeenCalledWith(2);
+  });
+
   it("routes FOREGROUND_ENTER to onForegroundEnter", () => {
     const a = { onClick: vi.fn(), onDoubleClick: vi.fn(), onScrollUp: vi.fn(), onScrollDown: vi.fn(), onForegroundExit: vi.fn(), onForegroundEnter: vi.fn() };
     routeEvent({ sysEvent: { eventType: OsEventTypeList.FOREGROUND_ENTER_EVENT } } as any, a);

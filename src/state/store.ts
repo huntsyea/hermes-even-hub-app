@@ -27,6 +27,14 @@ export function initialState(): AppState {
   };
 }
 
+export function selectSessionId(s: AppState, index: number): string | undefined {
+  return s.sessions.items[index]?.id;
+}
+
+export function setView(s: AppState, view: View): AppState {
+  return { ...s, view };
+}
+
 export function reduce(s: AppState, m: ServerMsg): AppState {
   switch (m.t) {
     case "hello.ok":

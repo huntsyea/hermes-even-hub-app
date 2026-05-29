@@ -1,6 +1,6 @@
 # Hermes ↔ Even Realities G2 Glasses Client — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. **Before dispatching any task, read the "Skills" section below and pass that task's named EvenHub/superpowers skills into the implementer's instructions — consulting them is mandatory, not optional.**
 
 **Goal:** Drive a locally-running Hermes agent hands-free from Even Realities G2 glasses — talk to it, watch replies stream, see tool calls, and switch sessions — over LAN and remotely.
 
@@ -19,6 +19,24 @@
   - **Glasses app:** `/Users/huntsyea/Dev/Even-Development` (existing — extend in place).
 - **Bridge runtime deps must be importable by Hermes's interpreter.** Hermes runs from `/Users/huntsyea/.hermes/hermes-agent` on Python 3.11.15. Install bridge deps into that environment (Task 0.4). Develop/test the bridge in its own `uv` venv.
 - **Shared secret:** a bridge token, stored in `~/.hermes/.env` and in the glasses app's build env. Never commit it.
+
+## Status (2026-05-29)
+
+- **M0, M1 — DONE.** Round-trip proven end-to-end against the live gateway; ~47 tests green across both repos.
+- **M2 — DONE** via the hot-path audit: **F1** (serialize/coalesce renders — `src/util/coalesce.ts` `serializeLatest`, supersedes the old Task 2.1 throttle), **F2** (full-replace `textContainerUpgrade` params in `src/ui/render.ts`), **F3** (teardown-on-exit in `src/main.ts`/`src/input/router.ts`, with a `// M4:` `audioControl(false)` hook). Remaining: **Task 2.2** visual tool-indicator confirmation on-device.
+- The SSE contract and SDK names below are now **verified** (no longer placeholders): SSE events are `assistant.delta`(`delta`), `tool.started`(`tool_name`,`preview`), `tool.completed`(`tool_name`), `assistant.completed`(`content`), terminal `done`; `TextContainerUpgrade` field is `content`; session id is nested at `session.id`.
+- **Resume at Task 2.2 → M3.**
+
+## Skills (REQUIRED — apply when creating/executing every task)
+
+Every task's instructions, and every implementer-subagent dispatch, MUST name the relevant skills below and require the implementer to consult them first. These are installed EvenHub + superpowers skills — reach for them, don't reinvent.
+
+- **Any glasses (TS) code task:** `everything-evenhub:sdk-reference` (exact signatures/types/enums — consult **before** coding) · `everything-evenhub:glasses-ui` (containers, page lifecycle, `rebuildPageContainer`, serialize-bridge-calls) · `everything-evenhub:design-guidelines` (576×288 layout, Unicode/icons, density) · `everything-evenhub:font-measurement` (size text to fit). Always `superpowers:test-driven-development`.
+- **Input / lifecycle:** `everything-evenhub:handle-input` (gestures, scroll, `List_ItemEvent`, foreground/background).
+- **Hardware:** `everything-evenhub:device-features` (audio/IMU/storage/cleanup); add `everything-evenhub:background-state` (`setBackgroundState`/`onBackgroundRestore`) when state must survive backgrounding.
+- **Packaging/deploy:** `everything-evenhub:build-and-deploy` + `everything-evenhub:cli-reference`.
+- **Verification (every milestone):** `everything-evenhub:test-with-simulator` + `everything-evenhub:simulator-automation`; close out with `superpowers:verification-before-completion`; use `superpowers:systematic-debugging` when behavior is wrong.
+- (Bridge/Python tasks: `superpowers:test-driven-development` only — no EvenHub skill applies.)
 
 ## Verified facts this plan builds on (from reading the real source)
 
@@ -939,20 +957,19 @@ Expected: status line goes `connecting… → connected`; after the click, the b
 
 ---
 
-# Milestone 2 — Live streaming + tool-call visibility
+# Milestone 2 — Live streaming + tool-call visibility — DONE (via F1/F2/F3 audit)
 
-Streaming already flows (Task 1.3 emits incremental `assistant` frames; Task 1.7/1.8 render them). This milestone proves and polishes it.
+Streaming flows (Task 1.3 emits incremental `assistant` frames; Task 1.7/1.8 render them). The hot-path audit hardened it:
 
-### Task 2.1: Throttle render churn on the glasses
+### Task 2.1: Serialize renders — DONE (F1, commit `d8885ca`)
 
-**Files:** Modify `src/main.ts` (wrap `renderChat` in a rAF/timeout coalescer).
+`src/util/coalesce.ts` `serializeLatest` (latest-wins; never runs `renderChat` concurrently) is wired into both `main.ts` render call-sites. This **supersedes the original "throttle" idea** — serialization (not a time window) is what `everything-evenhub:glasses-ui` requires to protect the BLE connection. (F2 also added full-replace `textContainerUpgrade` params; F3 added teardown-on-exit.)
 
-- [ ] **Step 1: Write the failing test** `tests/render-throttle.test.ts` for a `coalesce(fn, ms)` helper (only one call per window). 
-- [ ] **Step 2–4:** Implement `src/util/coalesce.ts`, make it pass, and use it so rapid `assistant` frames don't spam `textContainerUpgrade` (the bridge writes must be serialized per glasses-ui best practices). Commit.
+### Task 2.2: Verify tool indicators end-to-end (remaining)
 
-### Task 2.2: Verify tool indicators end-to-end
+**Skills:** `everything-evenhub:test-with-simulator` + `everything-evenhub:simulator-automation` (drive + screenshot); `everything-evenhub:simulator-automation` to read console; `superpowers:systematic-debugging` if events don't arrive.
 
-- [ ] **Step 1:** Prompt the agent (via the test click message, temporarily `"run: echo hello"`) so it calls a shell tool. In the simulator, confirm the status line shows `⚙ <tool>…` during the call and `⚙ <tool> ✓` after, then `✓ done`. Screenshot for the record. If tool events don't arrive, re-check `_to_event` mapping against the Task 0.3 fixture. Commit any fixes.
+- [ ] **Step 1:** With dev server + simulator running, send a single **click** (the M1 test prompt triggers a shell `date` tool). Confirm the status line shows `⚙ <tool>…` during the call, `⚙ <tool> ✓` after, then `✓ done` (F3 clears the tool indicator on `turn.done`). Screenshot for the record. If tool events don't arrive, re-check `_to_event` mapping in `hermes_client.py` against the Task 0.3 fixture. Commit any fixes.
 
 ---
 
@@ -961,6 +978,8 @@ Streaming already flows (Task 1.3 emits incremental `assistant` frames; Task 1.7
 ### Task 3.1: Glasses — sessions view (list + select)
 
 **Files:** Modify `src/ui/render.ts` (add `buildSessionsPage` using `ListContainerProperty`/`ListItemContainerProperty`), `src/ui/views.ts` (`renderSessions`), `src/state/store.ts` (add `view` toggle + selection), `src/input/router.ts`/`src/main.ts` (handle `List_ItemEvent`).
+
+**Skills:** `everything-evenhub:sdk-reference` (`ListContainerProperty`/`ListItemContainerProperty`/`List_ItemEvent.currentSelectItemIndex/Name`, `rebuildPageContainer` signatures) · `everything-evenhub:glasses-ui` (building/updating list containers, switching pages chat↔sessions via `rebuildPageContainer`) · `everything-evenhub:design-guidelines` (list row layout/density on 576×288, the "＋ New" row, Unicode marker) · `everything-evenhub:font-measurement` (truncate long session titles to the row width) · `everything-evenhub:handle-input` (list scroll + `CLICK_EVENT` selection + the chat↔sessions toggle gesture) · `superpowers:test-driven-development` (store helpers).
 
 - [ ] **Step 1: Write the failing store test** for view switching and that selecting an item index resolves to a session id:
 ```typescript
@@ -978,6 +997,8 @@ it("resolves a list index to a session id", () => {
 
 ### Task 3.2: Simulator verification of session switching
 
+**Skills:** `everything-evenhub:test-with-simulator` + `everything-evenhub:simulator-automation` (drive scroll/select, screenshot) · `superpowers:verification-before-completion`.
+
 - [ ] **Step 1:** In the simulator, open the sessions view, scroll the list (SCROLL events), select a different session, confirm `active` changes (header updates, chat clears), send a message, confirm it lands in that session (`hermes sessions list` on the Mac shows activity on the chosen session id). Select "＋ New", confirm a fresh session id. Screenshot. Commit.
 
 ---
@@ -992,12 +1013,16 @@ it("resolves a list index to a session id", () => {
 
 **Files:** Create `hermes_evenhub_bridge/asr.py`, `tests/test_asr.py`.
 
+**Skills:** `superpowers:test-driven-development` (bridge/Python — no EvenHub skill applies).
+
 - [ ] **Step 1: Write the failing test** — feed a known WAV (16k mono) decoded to PCM bytes through `transcribe_pcm(bytes) -> str` and assert it returns non-empty text containing an expected word. (Bundle a tiny fixture WAV, or synthesize silence + assert empty-string handling for the unit test, and gate the real-audio assertion behind an opt-in env marker.)
 - [ ] **Step 2–4:** Implement `transcribe_pcm` (buffer s16le 16k mono → the chosen engine). Keep the engine behind a small interface so it's swappable. Make tests pass.
 
 ### Task 4.3: Bridge — accept PCM frames + end-of-utterance
 
 **Files:** Modify `server.py` (handle `audio.start`/binary/`audio.stop`).
+
+**Skills:** `superpowers:test-driven-development` (bridge/Python). Reference `everything-evenhub:device-features` only for the PCM format contract (s16le / 16 kHz / mono) the glasses will send.
 
 - [ ] **Step 1: Write the failing server test** — client sends `audio.start`, several binary PCM chunks, `audio.stop`; expect a `transcript` frame then an `assistant`/`turn.done` sequence (stub the ASR to return `"hello"` and stub `run_turn`).
 - [ ] **Step 2–4:** Buffer binary frames between `audio.start`/`audio.stop`; on stop, `transcribe_pcm`, emit `P.transcript(text)`, then `_run(ws, active, text)`. Make tests pass. Commit.
@@ -1006,11 +1031,15 @@ it("resolves a list index to a session id", () => {
 
 **Files:** Create `src/audio/capture.ts`; modify `src/input/router.ts`/`src/main.ts` (double-tap toggles mic).
 
-- [ ] **Step 1: Implement `capture.ts`** — `await bridge.audioControl(true)`, subscribe to `onEvenHubEvent`, forward `event.audioEvent.audioPcm` as **binary** WS frames; on stop, `audioControl(false)` + send `audio.stop`. Clean up on `beforeunload`/foreground-exit (per device-features skill).
+**Skills:** `everything-evenhub:device-features` (PRIMARY — `audioControl`, PCM format, `event.audioEvent.audioPcm`, cleanup-on-exit; **wire the F3 `// M4:` `audioControl(false)` hook in `main.ts`'s `teardown()`**) · `everything-evenhub:handle-input` (double-tap-to-talk + foreground/background) · `everything-evenhub:design-guidelines` (`🎤 listening` status indicator) · `everything-evenhub:sdk-reference` (audio API + event signatures) · `everything-evenhub:background-state` (only if mic/turn state must survive backgrounding) · `superpowers:test-driven-development`.
+
+- [ ] **Step 1: Implement `capture.ts`** — `await bridge.audioControl(true)`, subscribe to `onEvenHubEvent`, forward `event.audioEvent.audioPcm` as **binary** WS frames; on stop, `audioControl(false)` + send `audio.stop`. Clean up on `beforeunload`/foreground-exit (the F3 `teardown()` already exists — extend it with `audioControl(false)`).
 - [ ] **Step 2:** Wire double-tap: first double-tap → `audio.start` + mic on (status `🎤 listening`); second → mic off + `audio.stop`. Render the returned `transcript` then the streamed reply.
 - [ ] **Step 3:** Add microphone permission to `app.json` if the SDK requires it. Build, commit.
 
 ### Task 4.5: Device/simulator verification
+
+**Skills:** `everything-evenhub:test-with-simulator` (note the limitation — no mic PCM in the sim) · `everything-evenhub:cli-reference` (`qr` sideload to real glasses) · `superpowers:verification-before-completion`.
 
 - [ ] **Step 1:** Voice path can't be fully exercised in the simulator (no mic PCM). Verify on hardware via `npm run qr` sideload: double-tap, speak, confirm `transcript` appears then the agent replies. Note any latency; tune end-of-utterance. Commit notes.
 
@@ -1027,6 +1056,8 @@ it("resolves a list index to a session id", () => {
 
 **Files:** Modify `.env.local` (`VITE_BRIDGE_REMOTE_URL=ws://<mac>.<tailnet>.ts.net:8765`) and `app.json` whitelist (add the same origin).
 
+**Skills:** `everything-evenhub:cli-reference` (`qr` sideload) · `everything-evenhub:build-and-deploy` (the `app.json` network-whitelist rules: list both LAN + tailnet origins explicitly) · `superpowers:verification-before-completion` (confirm LAN→remote failover on-device).
+
 - [ ] **Step 1:** Rebuild and sideload. The `BridgeClient` already cycles LAN→remote on failure (Task 1.6). Verify: on home WiFi it uses LAN; on cellular (WiFi off) it falls over to the Tailscale URL and still works. Screenshot/log both. Commit.
 
 ---
@@ -1037,15 +1068,21 @@ it("resolves a list index to a session id", () => {
 
 **Files:** Modify `src/state/store.ts`/`src/ui/views.ts` — on `turn.done` while the body was scrolled away or view≠chat, show a prominent `✓ done` banner + brief reply preview; clear on next interaction.
 
+**Skills:** `everything-evenhub:glasses-ui` (banner container / `rebuildPageContainer`) · `everything-evenhub:design-guidelines` (banner layout, `✓ done`, readable preview) · `everything-evenhub:font-measurement` (size the preview to fit) · `everything-evenhub:sdk-reference` · `superpowers:test-driven-development` (the `notify` store flag).
+
 - [ ] **Step 1:** Write a store test asserting a `notify` flag is set on `turn.done` when `view==="sessions"`, cleared on view change. Implement, render the banner, commit.
 
 ### Task 6.2: Resilience polish
 
 **Files:** `src/net/ws-client.ts`, `src/main.ts`, `server.py`.
 
+**Skills:** `everything-evenhub:device-features` (`setLocalStorage`/`getLocalStorage` for last-URL + active session; the F3 cleanup) · `everything-evenhub:background-state` (`setBackgroundState`/`onBackgroundRestore` so session/chat survives background→foreground — the proper mechanism vs browser storage) · `everything-evenhub:handle-input` (the `stop` gesture + foreground/background lifecycle) · `superpowers:test-driven-development`.
+
 - [ ] **Step 1:** Persist last-good URL + active session via `bridge.setLocalStorage` and restore on boot (so reconnects resume the right session). Add a `stop` gesture wired to `stopMsg()` (maps to `/v1/runs/{id}/stop` or interrupt — confirm endpoint). Add a heartbeat/ping so dead sockets are detected quickly. Write a store/ws test for the persistence + reconnect-resume, implement, commit.
 
 ### Task 6.3: Package
+
+**Skills:** `everything-evenhub:build-and-deploy` (validate `app.json`, build, `pack` `.ehpk`, submission rules) · `everything-evenhub:cli-reference` (`login`/`pack`/`qr`) · `superpowers:verification-before-completion`.
 
 - [ ] **Step 1:** `npm run pack` → produces the `.ehpk`. Document in `README.md`: how to start the gateway (with API server + bridge enabled), set the two env values, build/sideload the app, and connect. Commit. Optionally tag `v0.1.0` in both repos.
 

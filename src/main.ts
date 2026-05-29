@@ -1,11 +1,11 @@
 import { waitForEvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { loadConfig } from "./config";
 import { BridgeClient } from "./net/ws-client";
-import { initialState, reduce, type AppState } from "./state/store";
-import { buildChatPage } from "./ui/render";
-import { renderChat } from "./ui/views";
+import { initialState, reduce, selectSessionId, setView, type AppState } from "./state/store";
+import { buildChatPage, buildSessionsPage, showChatPage } from "./ui/render";
+import { renderChat, renderSessions } from "./ui/views";
 import { routeEvent } from "./input/router";
-import { textMsg } from "./protocol";
+import { textMsg, sessionsList, sessionsSwitch, sessionsNew } from "./protocol";
 import { serializeLatest } from "./util/coalesce";
 
 async function boot(): Promise<void> {
@@ -13,7 +13,8 @@ async function boot(): Promise<void> {
   await buildChatPage(bridge);
   let state: AppState = initialState();
   const cfg = loadConfig();
-  const scheduleRender = serializeLatest((s: AppState) => renderChat(bridge, s));
+  const scheduleRender = serializeLatest((s: AppState) =>
+    s.view === "sessions" ? renderSessions(bridge, s) : renderChat(bridge, s));
   const client = new BridgeClient(
     { urls: [cfg.lanUrl, cfg.remoteUrl], token: cfg.token },
     {
@@ -32,9 +33,34 @@ async function boot(): Promise<void> {
   }
 
   const off = bridge.onEvenHubEvent((e) => routeEvent(e, {
-    onClick: () => client.send(textMsg("What time is it?")),
-    onDoubleClick: () => bridge.shutDownPageContainer(1),
-    onScrollUp: () => {},
+    onClick: (index) => {
+      if (state.view === "chat") {
+        // Chat: send the M1 test turn.
+        client.send(textMsg("What time is it?"));
+      } else {
+        // Sessions: switch to the highlighted session, then return to chat.
+        const id = selectSessionId(state, index ?? -1);
+        if (id) {
+          client.send(sessionsSwitch(id));
+          state = setView(state, "chat");
+          void showChatPage(bridge);
+        }
+      }
+    },
+    onDoubleClick: () => {
+      if (state.view === "chat") {
+        // Chat: open the sessions view (request the list + build the page).
+        state = setView(state, "sessions");
+        client.send(sessionsList());
+        void buildSessionsPage(bridge, state.sessions.items.map((i) => i.title));
+      } else {
+        // Sessions: start a new session, then return to chat.
+        client.send(sessionsNew());
+        state = setView(state, "chat");
+        void showChatPage(bridge);
+      }
+    },
+    onScrollUp: () => {},   // sessions list scroll is handled natively by firmware
     onScrollDown: () => {},
     onForegroundExit: () => teardown(),
   }));
