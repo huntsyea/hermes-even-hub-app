@@ -73,4 +73,22 @@ describe("routeEvent", () => {
     expect(a.onClick).toHaveBeenCalledOnce();
     expect(a.onDoubleClick).not.toHaveBeenCalled();
   });
+
+  it("routes FOREGROUND_EXIT to onForegroundExit", () => {
+    const a = { onClick: vi.fn(), onDoubleClick: vi.fn(), onScrollUp: vi.fn(), onScrollDown: vi.fn(), onForegroundExit: vi.fn(), onForegroundEnter: vi.fn() };
+    routeEvent({ sysEvent: { eventType: OsEventTypeList.FOREGROUND_EXIT_EVENT } } as any, a);
+    expect(a.onForegroundExit).toHaveBeenCalledOnce();
+    expect(a.onClick).not.toHaveBeenCalled();
+  });
+
+  it("routes FOREGROUND_ENTER to onForegroundEnter", () => {
+    const a = { onClick: vi.fn(), onDoubleClick: vi.fn(), onScrollUp: vi.fn(), onScrollDown: vi.fn(), onForegroundExit: vi.fn(), onForegroundEnter: vi.fn() };
+    routeEvent({ sysEvent: { eventType: OsEventTypeList.FOREGROUND_ENTER_EVENT } } as any, a);
+    expect(a.onForegroundEnter).toHaveBeenCalledOnce();
+  });
+
+  it("does not throw when foreground handlers are omitted", () => {
+    const a = { onClick: vi.fn(), onDoubleClick: vi.fn(), onScrollUp: vi.fn(), onScrollDown: vi.fn() };
+    expect(() => routeEvent({ sysEvent: { eventType: OsEventTypeList.FOREGROUND_EXIT_EVENT } } as any, a)).not.toThrow();
+  });
 });

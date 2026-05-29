@@ -22,12 +22,25 @@ async function boot(): Promise<void> {
     },
   );
   client.connect();
-  bridge.onEvenHubEvent((e) => routeEvent(e, {
+  let torn = false;
+  function teardown(): void {
+    if (torn) return;
+    torn = true;
+    off();
+    client.close();
+    // M4: bridge.audioControl(false) once the mic is wired (see device-features)
+  }
+
+  const off = bridge.onEvenHubEvent((e) => routeEvent(e, {
     onClick: () => client.send(textMsg("What time is it?")),
     onDoubleClick: () => bridge.shutDownPageContainer(1),
     onScrollUp: () => {},
     onScrollDown: () => {},
+    onForegroundExit: () => teardown(),
   }));
+
+  window.addEventListener("beforeunload", teardown);
+
   console.log("[glasses] ready");
 }
 

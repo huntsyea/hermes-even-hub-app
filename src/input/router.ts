@@ -6,6 +6,8 @@ export interface InputActions {
   onDoubleClick: () => void;
   onScrollUp: () => void;
   onScrollDown: () => void;
+  onForegroundEnter?: () => void;
+  onForegroundExit?: () => void;
 }
 
 export function routeEvent(e: EvenHubEvent, a: InputActions): void {
@@ -14,4 +16,6 @@ export function routeEvent(e: EvenHubEvent, a: InputActions): void {
   else if (et === OsEventTypeList.DOUBLE_CLICK_EVENT) a.onDoubleClick();
   else if (et === OsEventTypeList.SCROLL_TOP_EVENT) a.onScrollUp();
   else if (et === OsEventTypeList.SCROLL_BOTTOM_EVENT) a.onScrollDown();
+  else if (et === OsEventTypeList.FOREGROUND_ENTER_EVENT) a.onForegroundEnter?.();
+  else if (et === OsEventTypeList.FOREGROUND_EXIT_EVENT) a.onForegroundExit?.();
 }
