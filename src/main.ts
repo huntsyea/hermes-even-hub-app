@@ -6,17 +6,19 @@ import { buildChatPage } from "./ui/render";
 import { renderChat } from "./ui/views";
 import { routeEvent } from "./input/router";
 import { textMsg } from "./protocol";
+import { serializeLatest } from "./util/coalesce";
 
 async function boot(): Promise<void> {
   const bridge = await waitForEvenAppBridge();
   await buildChatPage(bridge);
   let state: AppState = initialState();
   const cfg = loadConfig();
+  const scheduleRender = serializeLatest((s: AppState) => renderChat(bridge, s));
   const client = new BridgeClient(
     { urls: [cfg.lanUrl, cfg.remoteUrl], token: cfg.token },
     {
-      onMessage: (m) => { state = reduce(state, m); void renderChat(bridge, state); },
-      onStatus: (s) => { state = { ...state, conn: s }; void renderChat(bridge, state); },
+      onMessage: (m) => { state = reduce(state, m); scheduleRender(state); },
+      onStatus: (s) => { state = { ...state, conn: s }; scheduleRender(state); },
     },
   );
   client.connect();
