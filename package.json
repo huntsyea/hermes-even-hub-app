@@ -1,8 +1,11 @@
 {
-  "name": "even-development",
+  "name": "hermes-even-hub-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
+  "description": "Even Realities G2 glasses app (Even Hub WebView) — the client half of the G2 × Hermes bridge",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/huntsyea/hermes-even-hub-app.git" },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
@@ -11,7 +14,7 @@
     "sim:glow": "evenhub-simulator http://localhost:5173 --automation-port 9898 --glow",
     "sim:check": "node scripts/smoke-sim.mjs",
     "qr": "evenhub qr --url http://localhost:5173",
-    "pack": "npm run build && evenhub pack app.json dist -o even-development.ehpk",
+    "pack": "npm run build && evenhub pack app.json dist -o hermes-even-hub-app.ehpk",
     "test": "vitest run",
     "test:watch": "vitest"
   },

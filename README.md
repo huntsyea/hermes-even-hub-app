@@ -1,52 +1,47 @@
-# Even G2 + Hermes Agent Client
+# hermes-even-hub-app
 
-Drive a locally-running [Hermes agent](https://github.com/NousResearch/hermes-agent) hands-free from Even Realities G2 smart glasses. Talk to it, watch replies stream, see tool calls, and switch sessions.
+Drive a locally-running [Hermes agent](https://github.com/NousResearch/hermes-agent) hands-free
+from Even Realities G2 smart glasses. Talk to it, watch replies stream, see tool calls, and switch
+sessions.
+
+This is the **glasses-side app** (the WebSocket **client**). The server half — the Hermes plugin
+that hosts the WebSocket and bridges to the agent — is its sister repo,
+**[hermes-evenhub-bridge](https://github.com/huntsyea/hermes-evenhub-bridge)**.
+
+> **The wire protocol is a contract:** `src/protocol.ts` here and `protocol.py` in the bridge must
+> stay in sync — when you change one, update the other.
 
 ## Architecture
 
-Two pieces connected over your LAN (or Tailscale for remote):
-
-1. **Bridge plugin** (`hermes-evenhub-bridge`) — Python Hermes plugin that hosts a WebSocket server and proxies to the Hermes API server.
-2. **Glasses app** (this repo) — TypeScript Even Hub app running in the phone WebView, rendering on the 576x288 glasses display.
+```
+G2 glasses (576×288 + mic)
+        ▲
+        │  Even Hub WebView
+  this app (TypeScript / Vite)  ──JSON frames + PCM, ws:// (LAN / Tailscale)──▶  hermes-evenhub-bridge
+        ▲                                                                              │
+        └──────────────  assistant deltas · tool status · transcripts  ◀──────────────┘  → Hermes agent
+```
 
 ## Setup
 
-### 1. Hermes API server
+1. **Install + run the bridge** on the Mac — see
+   [hermes-evenhub-bridge](https://github.com/huntsyea/hermes-evenhub-bridge):
+   `hermes plugins install huntsyea/hermes-evenhub-bridge`, set `EVENHUB_BRIDGE_TOKEN` in
+   `~/.hermes/.env`, enable it, restart the gateway.
+2. **Get the connect URL** from the bridge host: `hermes even-g2 url`
+   (Tailscale-aware — works off the local Wi-Fi).
+3. **Configure this app** — copy `.env.example` → `.env.local` (gitignored):
+   ```
+   VITE_BRIDGE_LAN_URL=ws://<host>:8765
+   VITE_BRIDGE_TOKEN=<same shared secret>
+   # optional, for remote over Tailscale:
+   VITE_BRIDGE_REMOTE_URL=ws://<mac>.tailnet-xxxx.ts.net:8765
+   ```
+   Add that exact `ws://…` URL to `app.json`'s `network` whitelist, then `npm run dev`
+   (or `npm run pack` + `npm run qr` to sideload to real glasses).
 
-Ensure `~/.hermes/.env` contains:
-
-```
-API_SERVER_ENABLED=true
-API_SERVER_KEY=<your-key>
-EVENHUB_BRIDGE_TOKEN=<shared-secret>
-```
-
-Start the gateway:
-
-```bash
-hermes gateway restart
-```
-
-### 2. Bridge plugin
-
-The bridge lives at `~/Dev/hermes-evenhub-bridge` and is symlinked into `~/.hermes/plugins/`. It starts automatically when Hermes loads.
-
-### 3. Glasses app
-
-Create `.env.local` (gitignored):
-
-```
-VITE_BRIDGE_LAN_URL=ws://10.0.0.2:8765
-VITE_BRIDGE_TOKEN=<same-shared-secret>
-```
-
-For remote via Tailscale, also add:
-
-```
-VITE_BRIDGE_REMOTE_URL=ws://<mac>.tail-xxxx.ts.net:8765
-```
-
-And add the Tailscale URL to the `app.json` network whitelist.
+> `VITE_*` values are baked into the client bundle — treat the token as a shared LAN/Tailnet
+> secret. **Never commit `.env.local`.**
 
 ## Commands
 
@@ -106,7 +101,7 @@ replies stream back as incremental deltas and interleave with tool-call lines.
 npm run pack
 ```
 
-Produces `even-development.ehpk`. Sideload via `evenhub qr` during development.
+Produces `hermes-even-hub-app.ehpk`. Sideload via `evenhub qr` during development.
 
 ## References
 
