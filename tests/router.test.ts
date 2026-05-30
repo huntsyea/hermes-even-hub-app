@@ -22,6 +22,24 @@ describe("routeEvent", () => {
     expect(a.onScrollDown).not.toHaveBeenCalled();
   });
 
+  it("fires onClick for a click delivered with eventType omitted (proto3 zero-omission)", () => {
+    // Real host/SDK behavior: CLICK_EVENT is enum ordinal 0, which proto3 omits
+    // from JSON. The SDK does NOT default it, so sysEvent arrives with only
+    // eventSource and no eventType. This must still route to onClick.
+    const a = makeActions();
+    routeEvent({ sysEvent: { eventSource: 1 } } as any, a);
+    expect(a.onClick).toHaveBeenCalledOnce();
+    expect(a.onDoubleClick).not.toHaveBeenCalled();
+    expect(a.onScrollUp).not.toHaveBeenCalled();
+    expect(a.onScrollDown).not.toHaveBeenCalled();
+  });
+
+  it("fires onClick with the selected index for a list-item click with eventType omitted", () => {
+    const a = makeActions();
+    routeEvent({ listEvent: { currentSelectItemIndex: 3 } } as any, a);
+    expect(a.onClick).toHaveBeenCalledWith(3);
+  });
+
   it("fires onDoubleClick for DOUBLE_CLICK_EVENT via sysEvent", () => {
     const a = makeActions();
     routeEvent({ sysEvent: { eventType: OsEventTypeList.DOUBLE_CLICK_EVENT } } as any, a);
