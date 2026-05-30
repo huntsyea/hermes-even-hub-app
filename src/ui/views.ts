@@ -27,7 +27,7 @@ export async function renderChat(bridge: EvenAppBridge, s: AppState): Promise<vo
     ? "🎤 listening"
     : s.chat.tool
     ? `${s.chat.tool.emoji ?? "⚙"} ${s.chat.tool.name}${s.chat.tool.running ? "…" : " ✓"}`
-    : (s.chat.done ? "✓ done" : s.conn);
+    : (s.chat.done ? (s.notify ? "✓ reply ready" : "✓ done") : s.conn);
   await setText(bridge, IDS.status, status);
 }
 

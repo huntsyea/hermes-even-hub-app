@@ -15,6 +15,7 @@ export interface AppState {
   view: View;
   conn: string;
   recording: boolean;
+  notify: boolean;
   sessions: { items: SessionItem[]; active: string | null };
   chat: ChatState;
 }
@@ -24,6 +25,7 @@ export function initialState(): AppState {
     view: "chat",
     conn: "init",
     recording: false,
+    notify: false,
     sessions: { items: [], active: null },
     chat: { assistant: "", transcript: "", done: false },
   };
@@ -34,7 +36,7 @@ export function selectSessionId(s: AppState, index: number): string | undefined 
 }
 
 export function setView(s: AppState, view: View): AppState {
-  return { ...s, view };
+  return { ...s, view, notify: view === "chat" ? false : s.notify };
 }
 
 export function reduce(s: AppState, m: ServerMsg): AppState {
@@ -54,7 +56,7 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
     case "tool.end":
       return { ...s, chat: { ...s.chat, tool: s.chat.tool ? { ...s.chat.tool, running: false } : undefined } };
     case "turn.done":
-      return { ...s, chat: { ...s.chat, done: true, tool: undefined } };
+      return { ...s, notify: s.view !== "chat" ? true : s.notify, chat: { ...s.chat, done: true, tool: undefined } };
     case "error":
       return { ...s, conn: `error: ${m.msg}` };
     default:

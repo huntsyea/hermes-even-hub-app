@@ -95,4 +95,15 @@ describe("renderChat", () => {
     const statusCall = textCalls.find((c: any) => c.containerName === "status");
     expect(statusCall.content).toBe("🎤 listening");
   });
+
+  it("shows '✓ reply ready' in status when notify is true", async () => {
+    const { bridge, textCalls } = fakeBridge();
+    const s = stateWith({
+      notify: true,
+      chat: { assistant: "Here is the answer", transcript: "", done: true },
+    });
+    await renderChat(bridge, s);
+    const statusCall = textCalls.find((c: any) => c.containerName === "status");
+    expect(statusCall.content).toBe("✓ reply ready");
+  });
 });

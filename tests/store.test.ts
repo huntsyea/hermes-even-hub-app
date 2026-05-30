@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { initialState, reduce } from "../src/state/store";
+import { initialState, reduce, setView } from "../src/state/store";
 
 describe("store", () => {
   it("initialState has recording: false", () => {
@@ -43,5 +43,29 @@ describe("store", () => {
     s = reduce(s, { t: "turn.done" });
     expect(s.chat.done).toBe(true);
     expect(s.chat.tool).toBeUndefined();
+  });
+
+  it("turn.done while view=sessions sets notify true", () => {
+    const base = { ...initialState(), view: "sessions" as const };
+    const s = reduce(base, { t: "turn.done" });
+    expect(s.notify).toBe(true);
+  });
+
+  it("turn.done while view=chat keeps notify false", () => {
+    const base = initialState(); // view is "chat" by default
+    const s = reduce(base, { t: "turn.done" });
+    expect(s.notify).toBe(false);
+  });
+
+  it("setView to chat clears notify", () => {
+    const base = { ...initialState(), notify: true };
+    const result = setView(base, "chat");
+    expect(result.notify).toBe(false);
+  });
+
+  it("setView to sessions preserves notify", () => {
+    const base = { ...initialState(), notify: true };
+    const result = setView(base, "sessions");
+    expect(result.notify).toBe(true);
   });
 });
