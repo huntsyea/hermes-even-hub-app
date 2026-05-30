@@ -7,7 +7,8 @@ export type Turn = "idle" | "thinking" | "working";
 export type StreamItem =
   | { kind: "user"; text: string }
   | { kind: "tool"; name: string; running: boolean; ok?: boolean }
-  | { kind: "assistant"; text: string };
+  | { kind: "assistant"; text: string }
+  | { kind: "banner"; text: string };
 
 export interface AppState {
   screen: Screen;
