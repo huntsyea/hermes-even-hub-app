@@ -40,17 +40,20 @@ export function paginate(text: string, pageChars = 360): string[] {
   const pages: string[] = [];
   let cur: string[] = [];
   let len = 0;
+  const flush = () => {
+    while (cur[0] === "") cur.shift();
+    while (cur.length && cur[cur.length - 1] === "") cur.pop();
+    pages.push(cur.join("\n"));
+    cur = [];
+    len = 0;
+  };
   for (const ln of lines) {
     const sep = cur.length ? 1 : 0;
-    if (cur.length && len + sep + ln.length > pageChars) {
-      pages.push(cur.join("\n"));
-      cur = [];
-      len = 0;
-    }
+    if (cur.length && len + sep + ln.length > pageChars) flush();
     len += (cur.length ? 1 : 0) + ln.length;
     cur.push(ln);
   }
-  pages.push(cur.join("\n"));
+  flush();
   return pages;
 }
 

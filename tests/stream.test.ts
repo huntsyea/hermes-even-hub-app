@@ -54,6 +54,9 @@ describe("paginate", () => {
   it("hard-splits a single line longer than the budget", () => {
     expect(paginate("abcdef", 3)).toEqual(["abc", "def"]);
   });
+  it("drops blank-line separators that straddle a page boundary", () => {
+    expect(paginate("a".repeat(360) + "\n\n" + "x", 360)).toEqual(["a".repeat(360), "x"]);
+  });
 });
 
 describe("threadPages", () => {
