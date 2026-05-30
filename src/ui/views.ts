@@ -16,9 +16,16 @@ function truncateRow(title: string): string {
 }
 
 export async function renderChat(bridge: EvenAppBridge, s: AppState): Promise<void> {
+  // Header: show the active session's title (fall back to "Hermes" pre-connect)
+  const active = s.sessions.items.find((i) => i.id === s.sessions.active);
+  const title = active ? (active.title.trim() || "(untitled)") : "Hermes";
+  await setText(bridge, IDS.header, title);
+
   const tail = s.chat.assistant.slice(-BODY_MAX);
   await setText(bridge, IDS.body, tail || s.chat.transcript || "Single-tap to ask");
-  const status = s.chat.tool
+  const status = s.recording
+    ? "🎤 listening"
+    : s.chat.tool
     ? `${s.chat.tool.emoji ?? "⚙"} ${s.chat.tool.name}${s.chat.tool.running ? "…" : " ✓"}`
     : (s.chat.done ? "✓ done" : s.conn);
   await setText(bridge, IDS.status, status);

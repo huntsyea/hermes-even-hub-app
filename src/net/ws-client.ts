@@ -46,6 +46,10 @@ export class BridgeClient {
     if (this.ws && (this.ws as any).readyState === 1) (this.ws as any).send(raw);
   }
 
+  sendBinary(data: Uint8Array): void {
+    if (this.ws && (this.ws as any).readyState === 1) (this.ws as any).send(data);
+  }
+
   close(): void {
     this.alive = false;
     (this.ws as any)?.close();

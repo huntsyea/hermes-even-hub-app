@@ -14,6 +14,7 @@ export interface ChatState {
 export interface AppState {
   view: View;
   conn: string;
+  recording: boolean;
   sessions: { items: SessionItem[]; active: string | null };
   chat: ChatState;
 }
@@ -22,6 +23,7 @@ export function initialState(): AppState {
   return {
     view: "chat",
     conn: "init",
+    recording: false,
     sessions: { items: [], active: null },
     chat: { assistant: "", transcript: "", done: false },
   };

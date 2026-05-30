@@ -7,6 +7,7 @@ import { renderChat, renderSessions } from "./ui/views";
 import { routeEvent } from "./input/router";
 import { textMsg, sessionsList, sessionsSwitch, sessionsNew } from "./protocol";
 import { serializeLatest } from "./util/coalesce";
+import { createCapture } from "./audio/capture";
 
 async function boot(): Promise<void> {
   const bridge = await waitForEvenAppBridge();
@@ -23,47 +24,64 @@ async function boot(): Promise<void> {
     },
   );
   client.connect();
+  const capture = createCapture(bridge, client);
   let torn = false;
   function teardown(): void {
     if (torn) return;
     torn = true;
     off();
+    void capture.stop();  // stop mic if recording
     client.close();
-    // M4: bridge.audioControl(false) once the mic is wired (see device-features)
   }
 
-  const off = bridge.onEvenHubEvent((e) => routeEvent(e, {
-    onClick: (index) => {
-      if (state.view === "chat") {
-        // Chat: send the M1 test turn.
-        client.send(textMsg("What time is it?"));
-      } else {
-        // Sessions: switch to the highlighted session, then return to chat.
-        const id = selectSessionId(state, index ?? -1);
-        if (id) {
-          client.send(sessionsSwitch(id));
+  const off = bridge.onEvenHubEvent((e) => {
+    capture.handleEvent(e);
+    routeEvent(e, {
+      onClick: (index) => {
+        if (state.view === "chat") {
+          // Chat: send the M1 test turn.
+          client.send(textMsg("What time is it?"));
+        } else {
+          // Sessions: switch to the highlighted session, then return to chat.
+          const id = selectSessionId(state, index ?? -1);
+          if (id) {
+            client.send(sessionsSwitch(id));
+            state = setView(state, "chat");
+            void showChatPage(bridge);
+          }
+        }
+      },
+      onDoubleClick: () => {
+        if (state.view === "chat") {
+          // Chat: toggle the mic.
+          const nowRecording = !state.recording;
+          state = { ...state, recording: nowRecording };
+          scheduleRender(state);
+          if (nowRecording) {
+            void capture.start();
+          } else {
+            void capture.stop();
+          }
+        } else {
+          // Sessions: start a new session, then return to chat.
+          client.send(sessionsNew());
           state = setView(state, "chat");
           void showChatPage(bridge);
         }
-      }
-    },
-    onDoubleClick: () => {
-      if (state.view === "chat") {
-        // Chat: open the sessions view (request the list + build the page).
-        state = setView(state, "sessions");
-        client.send(sessionsList());
-        void buildSessionsPage(bridge, state.sessions.items.map((i) => i.title));
-      } else {
-        // Sessions: start a new session, then return to chat.
-        client.send(sessionsNew());
-        state = setView(state, "chat");
-        void showChatPage(bridge);
-      }
-    },
-    onScrollUp: () => {},   // sessions list scroll is handled natively by firmware
-    onScrollDown: () => {},
-    onForegroundExit: () => teardown(),
-  }));
+      },
+      onScrollUp: () => {
+        if (state.view === "chat") {
+          // Chat: open the sessions view (request the list + build the page).
+          state = setView(state, "sessions");
+          client.send(sessionsList());
+          void buildSessionsPage(bridge, state.sessions.items.map((i) => i.title));
+        }
+        // Sessions: scroll is handled natively by firmware
+      },
+      onScrollDown: () => {},
+      onForegroundExit: () => teardown(),
+    });
+  });
 
   window.addEventListener("beforeunload", teardown);
 

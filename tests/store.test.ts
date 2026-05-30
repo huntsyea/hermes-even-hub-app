@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest";
 import { initialState, reduce } from "../src/state/store";
 
 describe("store", () => {
+  it("initialState has recording: false", () => {
+    expect(initialState().recording).toBe(false);
+  });
+
   it("replaces assistant text on each assistant frame", () => {
     let s = initialState();
     s = reduce(s, { t: "assistant", text: "he" });
