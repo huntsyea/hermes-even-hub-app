@@ -22,10 +22,46 @@
 
 ## Status (2026-05-29)
 
-- **M0, M1 — DONE.** Round-trip proven end-to-end against the live gateway; ~47 tests green across both repos.
-- **M2 — DONE** via the hot-path audit: **F1** (serialize/coalesce renders — `src/util/coalesce.ts` `serializeLatest`, supersedes the old Task 2.1 throttle), **F2** (full-replace `textContainerUpgrade` params in `src/ui/render.ts`), **F3** (teardown-on-exit in `src/main.ts`/`src/input/router.ts`, with a `// M4:` `audioControl(false)` hook). Remaining: **Task 2.2** visual tool-indicator confirmation on-device.
-- The SSE contract and SDK names below are now **verified** (no longer placeholders): SSE events are `assistant.delta`(`delta`), `tool.started`(`tool_name`,`preview`), `tool.completed`(`tool_name`), `assistant.completed`(`content`), terminal `done`; `TextContainerUpgrade` field is `content`; session id is nested at `session.id`.
-- **Resume at Task 2.2 → M3.**
+- **M0, M1 — DONE.** Round-trip proven end-to-end against the live gateway.
+- **M2 — DONE** via the hot-path audit (F1 serialize/coalesce, F2 full-replace params, F3 teardown-on-exit).
+- **M3 — DONE.** Sessions list/switch/new, view-aware gestures, page switching. Chat header shows active session title.
+- **M4 — DONE (code-complete).** Bridge ASR (`faster-whisper`), PCM pipeline (`audio.start`→buffer→`audio.stop`→transcribe→turn), glasses `createCapture` module, double-tap toggles mic, `🎤 listening` status, F3 teardown wired with `capture.stop()`.
+- **M5 — DEFERRED.** Tailscale installed but not configured. Needs: `tailscale login` on Mac + phone, `.env.local` + `app.json` whitelist update. `BridgeClient` already supports URL failover — no code change needed.
+- **M6 — DONE (code-complete).** 6.1 notify flag + `✓ reply ready` status. 6.2 SDK localStorage persistence (last-good URL + active session), scroll-down stop gesture, dead-socket watchdog (45s timeout). 6.3 microphone permission in `app.json`, README updated, build verified (71KB bundle).
+- The SSE contract and SDK names are **verified** (no longer placeholders).
+- **Test counts:** 55 glasses tests (10 files) + 28 bridge tests = **83 total, all green.** Types clean, build clean.
+
+### ⚠ ON-DEVICE VERIFICATION NEEDED (before shipping)
+
+The following tasks require the simulator or real glasses and are deferred until a manual test session:
+
+1. **Task 2.2** — Visual tool-indicator confirmation (`⚙ bash…` → `✓ bash` → `✓ done`, no stale chars)
+2. **Task 3.2** — Sessions list scroll/select/switch/new on the glasses panel
+3. **Task 4.5** — Voice round-trip: double-tap → `🎤 listening` → speak → transcript appears → agent replies. Sim can't feed PCM — **needs real glasses** via `npm run qr` sideload. Tune end-of-utterance latency.
+4. **Session title in header** — confirm active session title renders correctly on page switch
+5. **Notify banner** — trigger a turn while on sessions view, return to chat, confirm `✓ reply ready` shows
+6. **Stop gesture** — scroll down during a streaming reply, confirm the turn stops (v1: bridge-side no-op, so reply may finish)
+7. **Persistence** — close/reopen the app, confirm it reconnects to the last-used URL and resumes the active session
+8. **Watchdog** — disconnect WiFi for >45s, reconnect, confirm auto-reconnection works
+
+**How to test:**
+```bash
+# Terminal 1: start the bridge
+cd ~/Dev/hermes-evenhub-bridge && hermes gateway run --replace
+
+# Terminal 2: start the glasses app dev server
+cd ~/Dev/Even-Development && npm run dev
+
+# Terminal 3 (for simulator): start Even Hub simulator, then:
+cd ~/Dev/Even-Development && npm run sim:check
+
+# For real glasses (voice test):
+cd ~/Dev/Even-Development && npm run qr
+```
+
+**Gesture map to exercise:**
+- Chat: click = send turn, double-tap = toggle mic, scroll-up = open sessions
+- Sessions: click = switch session, double-tap = new session
 
 ## Skills (REQUIRED — apply when creating/executing every task)
 

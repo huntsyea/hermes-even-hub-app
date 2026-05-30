@@ -88,3 +88,11 @@ When `sessions.new` is handled, the bridge POSTs to the Hermes API. The response
 ```
 
 The session ID is nested at `response.session.id` (not at the top level).
+
+---
+
+## STT Engine (M4)
+
+**Choice: `faster-whisper`** — a CTranslate2-based Whisper binding (CPU-capable, low latency for short utterances).
+
+Hermes has internal STT (Discord voice pipeline) but doesn't expose it as a reusable endpoint. The bridge runs its own `faster-whisper` instance in-process. The glasses send raw PCM (s16le, 16 kHz, mono) over binary WS frames; the bridge buffers between `audio.start`/`audio.stop`, converts to a numpy float32 array, and calls `WhisperModel.transcribe()`. The resulting transcript is emitted as a `transcript{text}` frame, then fed into `run_turn()` as the user message.
