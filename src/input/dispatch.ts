@@ -1,5 +1,5 @@
 import type { AppState } from "../state/store";
-import { sessionsNew, sessionsSwitch } from "../protocol";
+import { sessionsNew, sessionsSwitch, textMsg } from "../protocol";
 
 export type Gesture = "click" | "doubleClick" | "scrollUp" | "scrollDown";
 
@@ -37,6 +37,18 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
   if (s.phase === "recording") {
     if (g === "click") return { state: { ...s, phase: "transcribing" }, effects: [{ kind: "stopMic" }] };
     if (g === "doubleClick") return { state: { ...s, phase: "idle" }, effects: [{ kind: "stopMic" }] };
+    return { state: s, effects: [] };
+  }
+  if (s.phase === "review") {
+    if (g === "click" && s.pending) {
+      const text = s.pending.transcript;
+      return {
+        state: { ...s, stream: [...s.stream, { kind: "user", text }], pending: null, phase: "idle", turn: "thinking" },
+        effects: [{ kind: "send", frame: textMsg(text) }],
+      };
+    }
+    if (g === "scrollDown") return { state: { ...s, pending: null, phase: "idle" }, effects: [] };
+    if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [] };
     return { state: s, effects: [] };
   }
   return { state: s, effects: [] };

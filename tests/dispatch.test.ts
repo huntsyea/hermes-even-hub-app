@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { dispatch } from "../src/input/dispatch";
 import { initialState, type AppState } from "../src/state/store";
-import { sessionsNew, sessionsSwitch } from "../src/protocol";
+import { sessionsNew, sessionsSwitch, textMsg } from "../src/protocol";
 
 function listWith(items: { id: string; title: string }[]): AppState {
   return { ...initialState(), sessions: { items: items.map((i) => ({ ...i, updated: 0 })), active: null } };
@@ -60,5 +60,33 @@ describe("dispatch: session recording", () => {
     const r = dispatch(session("recording"), "doubleClick");
     expect(r.state.phase).toBe("idle");
     expect(r.effects).toEqual([{ kind: "stopMic" }]);
+  });
+});
+
+function review(transcript: string): AppState {
+  return { ...initialState(), screen: "session", phase: "review", pending: { transcript } };
+}
+
+describe("dispatch: session review", () => {
+  it("tap sends: pushes a user item, clears pending, thinks", () => {
+    const r = dispatch(review("add dark mode"), "click");
+    expect(r.state.stream).toEqual([{ kind: "user", text: "add dark mode" }]);
+    expect(r.state.pending).toBeNull();
+    expect(r.state.phase).toBe("idle");
+    expect(r.state.turn).toBe("thinking");
+    expect(r.effects).toEqual([{ kind: "send", frame: textMsg("add dark mode") }]);
+  });
+  it("swipe-down redoes: clears pending, no send, stream untouched", () => {
+    const r = dispatch(review("oops"), "scrollDown");
+    expect(r.state.pending).toBeNull();
+    expect(r.state.phase).toBe("idle");
+    expect(r.state.stream).toEqual([]);
+    expect(r.effects).toEqual([]);
+  });
+  it("double-press discards and returns to the list", () => {
+    const r = dispatch(review("oops"), "doubleClick");
+    expect(r.state.screen).toBe("list");
+    expect(r.state.pending).toBeNull();
+    expect(r.effects).toEqual([]);
   });
 });
