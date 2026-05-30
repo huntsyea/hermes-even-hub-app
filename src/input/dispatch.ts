@@ -1,5 +1,6 @@
 import type { AppState } from "../state/store";
 import { sessionsNew, sessionsSwitch, textMsg } from "../protocol";
+import { threadPages } from "../ui/stream";
 
 export type Gesture = "click" | "doubleClick" | "scrollUp" | "scrollDown";
 
@@ -13,6 +14,7 @@ export interface DispatchResult { state: AppState; effects: Effect[]; }
 
 const enterSession = (s: AppState, active: string | null): AppState => ({
   ...s, screen: "session", phase: "idle", stream: [], pending: null, turn: "idle",
+  scrollPage: null,
   sessions: { ...s.sessions, active },
 });
 
@@ -32,6 +34,17 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
   if (s.phase === "idle") {
     if (g === "click") return { state: { ...s, phase: "recording" }, effects: [{ kind: "startMic" }] };
     if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [] };
+    if (g === "scrollUp") {
+      const pages = threadPages(s.stream);
+      const cur = s.scrollPage === null ? pages.length - 1 : s.scrollPage;
+      return { state: { ...s, scrollPage: Math.max(0, cur - 1) }, effects: [] };
+    }
+    if (g === "scrollDown") {
+      if (s.scrollPage === null) return { state: s, effects: [] };
+      const pages = threadPages(s.stream);
+      const next = s.scrollPage + 1;
+      return { state: { ...s, scrollPage: next >= pages.length - 1 ? null : next }, effects: [] };
+    }
     return { state: s, effects: [] };
   }
   if (s.phase === "recording") {

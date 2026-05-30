@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { dispatch } from "../src/input/dispatch";
 import { initialState, type AppState } from "../src/state/store";
 import { sessionsNew, sessionsSwitch, textMsg } from "../src/protocol";
+import { threadPages } from "../src/ui/stream";
 
 function listWith(items: { id: string; title: string }[]): AppState {
   return { ...initialState(), sessions: { items: items.map((i) => ({ ...i, updated: 0 })), active: null } };
@@ -100,5 +101,37 @@ describe("dispatch: session transcribing", () => {
   it("tap/scroll are no-ops while transcribing", () => {
     expect(dispatch(session("transcribing"), "click").state.phase).toBe("transcribing");
     expect(dispatch(session("transcribing"), "scrollDown").effects).toEqual([]);
+  });
+});
+
+function longSession(): AppState {
+  const big = "x".repeat(800); // ~3 pages at the 360-char budget
+  return {
+    ...initialState(),
+    screen: "session",
+    phase: "idle",
+    stream: [{ kind: "user", text: "hi" }, { kind: "assistant", text: big }],
+  };
+}
+
+describe("dispatch: session idle scrolling", () => {
+  it("scrollUp from follow moves to the second-to-last page", () => {
+    const pages = threadPages(longSession().stream);
+    const r = dispatch(longSession(), "scrollUp");
+    expect(r.state.scrollPage).toBe(pages.length - 2);
+    expect(r.effects).toEqual([]);
+  });
+  it("scrollUp clamps at the first page", () => {
+    const r = dispatch({ ...longSession(), scrollPage: 0 }, "scrollUp");
+    expect(r.state.scrollPage).toBe(0);
+  });
+  it("scrollDown to the last page resumes follow (null)", () => {
+    const pages = threadPages(longSession().stream);
+    const r = dispatch({ ...longSession(), scrollPage: pages.length - 2 }, "scrollDown");
+    expect(r.state.scrollPage).toBeNull();
+  });
+  it("scrollDown while already following is a no-op", () => {
+    const r = dispatch({ ...longSession(), scrollPage: null }, "scrollDown");
+    expect(r.state.scrollPage).toBeNull();
   });
 });

@@ -18,6 +18,7 @@ export interface AppState {
   stream: StreamItem[];
   pending: { transcript: string } | null;
   turn: Turn;
+  scrollPage: number | null; // null = follow latest page; number = absolute page index (held)
 }
 
 export function initialState(): AppState {
@@ -29,6 +30,7 @@ export function initialState(): AppState {
     stream: [],
     pending: null,
     turn: "idle",
+    scrollPage: null,
   };
 }
 
