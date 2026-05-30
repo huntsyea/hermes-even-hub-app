@@ -23,7 +23,7 @@ function chatTextObjects(): TextContainerProperty[] {
   ];
 }
 
-// Session page: the three text containers (header / body / status), reused for
+// Session page: the four text containers (header / dot / body / status), reused for
 // every session render. createStartUpPageContainer is one-shot, so re-entering a
 // session uses rebuildPageContainer; renderSession() then fills content in-place.
 export async function showSessionPage(bridge: EvenAppBridge): Promise<void> {
