@@ -175,8 +175,10 @@ Reducer rules (pure, TDD'd):
 - **redo** (swipe↓ in review) → clear `pending`, `phase = "idle"`.
 - `tool.start{name}` → push `{kind:"tool", name, running:true}`, `turn = "working"`.
 - `tool.end{name, ok}` → patch the matching trailing tool item to `running:false, ok`.
-- `assistant{text}` (delta) → append to the trailing `assistant` item, or push a new
-  one if the last item isn't assistant.
+- `assistant.delta{text}` → append the delta to the trailing `assistant` item, or push
+  a new one if the last item isn't assistant. (Assistant text streams as **incremental
+  deltas**, not cumulative full-text — a `tool.start` closes the current segment so the
+  next delta opens a fresh one, keeping prose and tool lines correctly interleaved.)
 - `turn.done` → `turn = "idle"`.
 - Recording transitions (`startRecording`/`stopRecording`) set `phase` and are driven
   by the gesture dispatcher, not the socket.
@@ -184,14 +186,22 @@ Reducer rules (pure, TDD'd):
 The agent-state bar string is a pure function `barText(state)` derived from
 `(phase, turn, pending)`.
 
-### B. Bridge change (`hermes-evenhub-bridge/server.py`)
+### B. Bridge changes (`hermes-evenhub-bridge/server.py`, `protocol.py`)
 
-The only server-side change. Today `audio.stop` transcribes **and** immediately runs
-the turn. New behavior: `audio.stop` → transcribe → emit `transcript{text}` **and
-stop**. The turn runs only when the glasses later send a `text` frame (existing
-handler, unchanged). This decoupling is what makes review/redo possible. Covered by a
-pytest asserting `audio.stop` emits a transcript and does **not** invoke `run_turn`,
-and that a subsequent `text` frame does.
+Two server-side changes:
+
+1. **Decouple transcription from the turn.** Today `audio.stop` transcribes **and**
+   immediately runs the turn. New behavior: `audio.stop` → transcribe → emit
+   `transcript{text}` **and stop**. The turn runs only when the glasses later send a
+   `text` frame (existing handler, unchanged). This is what makes review/redo possible.
+2. **Stream incremental deltas.** `_run` currently accumulates `acc` across the whole
+   turn and re-sends the cumulative string on every text event, which duplicates prose
+   around tool calls. New behavior: send each `text` event as a raw `assistant.delta`
+   (no `acc`); the `final` event is not re-sent (the deltas already streamed it).
+
+Covered by pytest: `audio.stop` emits a transcript and does **not** invoke `run_turn`;
+a subsequent `text` frame does; and `_run` emits raw `assistant.delta` frames (not
+cumulative).
 
 ### C. Render (`src/ui/render.ts`, `src/ui/views.ts`)
 
