@@ -32,12 +32,17 @@ export function initialState(): AppState {
   };
 }
 
-function appendDelta(stream: StreamItem[], delta: string): StreamItem[] {
+// Assistant output before the first user item is the session banner (model,
+// cwd, …); after the user has spoken it is normal assistant text. Either kind
+// extends its own trailing segment so streamed deltas coalesce.
+function appendStream(stream: StreamItem[], delta: string): StreamItem[] {
+  const kind: "assistant" | "banner" =
+    stream.some((it) => it.kind === "user") ? "assistant" : "banner";
   const last = stream[stream.length - 1];
-  if (last && last.kind === "assistant") {
-    return [...stream.slice(0, -1), { kind: "assistant", text: last.text + delta }];
+  if (last && last.kind === kind) {
+    return [...stream.slice(0, -1), { kind, text: last.text + delta } as StreamItem];
   }
-  return [...stream, { kind: "assistant", text: delta }];
+  return [...stream, { kind, text: delta } as StreamItem];
 }
 
 function patchTool(stream: StreamItem[], name: string, ok: boolean): StreamItem[] {
@@ -62,7 +67,8 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
     case "error":
       return { ...s, conn: `error: ${m.msg}` };
     case "assistant.delta":
-      return { ...s, stream: appendDelta(s.stream, m.text) };
+    case "assistant":
+      return { ...s, stream: appendStream(s.stream, m.text) };
     case "tool.start":
       return { ...s, stream: [...s.stream, { kind: "tool", name: m.name, running: true }], turn: "working" };
     case "tool.end":
