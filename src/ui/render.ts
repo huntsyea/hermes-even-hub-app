@@ -10,8 +10,9 @@ export const NAMES: Record<number, string> = {
   [IDS.header]: "header", [IDS.body]: "body", [IDS.status]: "status", [IDS.list]: "list",
 };
 
-// The 3 chat text containers, shared by createStartUpPageContainer (initial)
-// and rebuildPageContainer (re-entry from the sessions page).
+// The 3 chat text containers, shared by showSessionPage (rebuildPageContainer).
+// createStartUpPageContainer is one-shot, so the startup page is the list;
+// re-entering a session uses rebuildPageContainer with these 3 text containers.
 function chatTextObjects(): TextContainerProperty[] {
   return [
     new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0, yPosition: 0,   width: 576, height: 40,  paddingLength: 4, content: "Hermes" }),
@@ -20,44 +21,45 @@ function chatTextObjects(): TextContainerProperty[] {
   ];
 }
 
-export async function buildChatPage(bridge: EvenAppBridge): Promise<void> {
-  await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({
-    containerTotalNum: 3,
-    textObject: chatTextObjects(),
-  }));
-}
-
-// Re-enter the chat page after the sessions list. createStartUpPageContainer
-// is one-shot (SDK rule), so switching pages uses rebuildPageContainer with the
-// same 3 text containers. renderChat() then refills body/status in-place.
-export async function showChatPage(bridge: EvenAppBridge): Promise<void> {
+// Session page: the three text containers (header / body / status), reused for
+// every session render. createStartUpPageContainer is one-shot, so re-entering a
+// session uses rebuildPageContainer; renderSession() then fills content in-place.
+export async function showSessionPage(bridge: EvenAppBridge): Promise<void> {
   await bridge.rebuildPageContainer(new RebuildPageContainer({
     containerTotalNum: 3,
     textObject: chatTextObjects(),
   }));
 }
 
-// Build the sessions page: a single full-canvas scrollable list. The list
-// container captures input (single-press => List_ItemEvent w/ index, double-press
-// => Sys_ItemEvent). Firmware scrolls the highlight natively; no scroll handler.
-// itemCount is clamped to the firmware list max (20).
-export async function buildSessionsPage(bridge: EvenAppBridge, titles: string[]): Promise<void> {
-  const items = titles.slice(0, 20);
+function listContainer(rows: string[]): ListContainerProperty[] {
+  const items = rows.slice(0, 20);
+  return [
+    new ListContainerProperty({
+      containerID: IDS.list, containerName: "list",
+      xPosition: 0, yPosition: 0, width: 576, height: 288,
+      isEventCapture: 1,
+      itemContainer: new ListItemContainerProperty({
+        itemCount: Math.max(1, items.length),
+        itemWidth: 0,
+        isItemSelectBorderEn: 1,
+        itemName: items.length ? items : ["No sessions"],
+      }),
+    }),
+  ];
+}
+
+// Boot lands on the list, so the one-shot startup page IS the list.
+export async function createListStartup(bridge: EvenAppBridge, rows: string[]): Promise<void> {
+  await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({
+    containerTotalNum: 1,
+    listObject: listContainer(rows),
+  }));
+}
+
+export async function showListPage(bridge: EvenAppBridge, rows: string[]): Promise<void> {
   await bridge.rebuildPageContainer(new RebuildPageContainer({
     containerTotalNum: 1,
-    listObject: [
-      new ListContainerProperty({
-        containerID: IDS.list, containerName: "list",
-        xPosition: 0, yPosition: 0, width: 576, height: 288,
-        isEventCapture: 1,
-        itemContainer: new ListItemContainerProperty({
-          itemCount: Math.max(1, items.length),
-          itemWidth: 0,              // 0 = auto, fills container width
-          isItemSelectBorderEn: 1,   // show selection border on the highlighted row
-          itemName: items.length ? items : ["No sessions"],
-        }),
-      }),
-    ],
+    listObject: listContainer(rows),
   }));
 }
 

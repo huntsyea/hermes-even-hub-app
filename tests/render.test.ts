@@ -1,32 +1,47 @@
 import { describe, it, expect, vi } from "vitest";
-import { setText, IDS } from "../src/ui/render";
+import { setText, IDS, createListStartup, showListPage, showSessionPage } from "../src/ui/render";
 
 function fakeBridge() {
-  const calls: any[] = [];
   return {
-    bridge: { textContainerUpgrade: vi.fn(async (arg: any) => { calls.push(arg); }) } as any,
-    calls,
-  };
+    createStartUpPageContainer: vi.fn(async () => {}),
+    rebuildPageContainer: vi.fn(async () => {}),
+    textContainerUpgrade: vi.fn(async () => {}),
+  } as any;
 }
 
 describe("setText", () => {
-  it("sends full-replace params with the matching container name", async () => {
-    const { bridge, calls } = fakeBridge();
-    await setText(bridge, IDS.status, "x");
-    expect(calls).toHaveLength(1);
-    const arg = calls[0];
-    expect(arg.containerID).toBe(IDS.status);
+  it("full-replaces with the container name", async () => {
+    const b = fakeBridge();
+    await setText(b, IDS.status, "x");
+    const arg = b.textContainerUpgrade.mock.calls[0][0];
     expect(arg.containerName).toBe("status");
     expect(arg.contentOffset).toBe(0);
     expect(arg.contentLength).toBe(0);
     expect(arg.content).toBe("x");
   });
+});
 
-  it("uses the right name for each known container id", async () => {
-    const { bridge, calls } = fakeBridge();
-    await setText(bridge, IDS.header, "h");
-    await setText(bridge, IDS.body, "b");
-    expect(calls[0].containerName).toBe("header");
-    expect(calls[1].containerName).toBe("body");
+describe("list pages", () => {
+  it("createListStartup builds a one-shot list page with the given rows", async () => {
+    const b = fakeBridge();
+    await createListStartup(b, ["＋ New session", "A"]);
+    const arg = b.createStartUpPageContainer.mock.calls[0][0];
+    expect(arg.listObject[0].itemContainer.itemName).toEqual(["＋ New session", "A"]);
+  });
+  it("showListPage rebuilds the list page with the rows", async () => {
+    const b = fakeBridge();
+    await showListPage(b, ["＋ New session"]);
+    const arg = b.rebuildPageContainer.mock.calls[0][0];
+    expect(arg.listObject[0].itemContainer.itemName).toEqual(["＋ New session"]);
+  });
+});
+
+describe("session page", () => {
+  it("showSessionPage rebuilds three text containers", async () => {
+    const b = fakeBridge();
+    await showSessionPage(b);
+    const arg = b.rebuildPageContainer.mock.calls[0][0];
+    expect(arg.containerTotalNum).toBe(3);
+    expect(arg.textObject).toHaveLength(3);
   });
 });
