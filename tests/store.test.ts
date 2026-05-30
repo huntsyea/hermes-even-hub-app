@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { initialState, reduce, type AppState } from "../src/state/store";
+import { initialState, reduce, barText, connDot, type AppState } from "../src/state/store";
 
 describe("initialState", () => {
   it("boots on the session list, idle, empty stream", () => {
@@ -77,5 +77,30 @@ describe("reduce: transcript guard", () => {
     const next = reduce(s, { t: "transcript", text: "stale" });
     expect(next.pending).toBeNull();
     expect(next.phase).toBe("idle");
+  });
+});
+
+describe("barText", () => {
+  const base = { ...initialState(), screen: "session" as const };
+  it("recording / transcribing / review", () => {
+    expect(barText({ ...base, phase: "recording" })).toBe("🎤 recording…");
+    expect(barText({ ...base, phase: "transcribing" })).toBe("transcribing…");
+    expect(barText({ ...base, phase: "review" })).toBe("tap = send · swipe↓ = redo");
+  });
+  it("idle reflects the turn state", () => {
+    expect(barText({ ...base, phase: "idle", turn: "idle" })).toBe("ready for input");
+    expect(barText({ ...base, phase: "idle", turn: "thinking" })).toBe("thinking…");
+  });
+  it("working names the active tool", () => {
+    const s = { ...base, phase: "idle" as const, turn: "working" as const,
+      stream: [{ kind: "tool" as const, name: "terminal", running: true }] };
+    expect(barText(s)).toBe("working… (terminal)");
+  });
+});
+
+describe("connDot", () => {
+  it("filled when connected, hollow otherwise", () => {
+    expect(connDot("connected")).toBe("●");
+    expect(connDot("reconnecting")).toBe("◌");
   });
 });

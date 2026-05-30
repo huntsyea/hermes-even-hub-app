@@ -76,3 +76,26 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
       return s;
   }
 }
+
+export function barText(s: AppState): string {
+  switch (s.phase) {
+    case "recording": return "🎤 recording…";
+    case "transcribing": return "transcribing…";
+    case "review": return "tap = send · swipe↓ = redo";
+    case "idle":
+    default: {
+      if (s.turn === "working") {
+        for (let i = s.stream.length - 1; i >= 0; i--) {
+          const it = s.stream[i];
+          if (it.kind === "tool" && it.running) return `working… (${it.name})`;
+        }
+        return "working…";
+      }
+      return s.turn === "thinking" ? "thinking…" : "ready for input";
+    }
+  }
+}
+
+export function connDot(conn: string): string {
+  return conn === "connected" ? "●" : "◌";
+}
