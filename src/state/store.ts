@@ -40,9 +40,9 @@ function appendStream(stream: StreamItem[], delta: string): StreamItem[] {
     stream.some((it) => it.kind === "user") ? "assistant" : "banner";
   const last = stream[stream.length - 1];
   if (last && last.kind === kind) {
-    return [...stream.slice(0, -1), { kind, text: last.text + delta } as StreamItem];
+    return [...stream.slice(0, -1), { kind, text: last.text + delta }];
   }
-  return [...stream, { kind, text: delta } as StreamItem];
+  return [...stream, { kind, text: delta }];
 }
 
 function patchTool(stream: StreamItem[], name: string, ok: boolean): StreamItem[] {

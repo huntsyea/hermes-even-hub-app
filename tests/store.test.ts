@@ -44,6 +44,14 @@ describe("reduce: stream", () => {
       { kind: "assistant", text: "It's Friday" },
     ]);
   });
+  it("a full assistant frame after a user item appends assistant text", () => {
+    let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
+    s = reduce(s, { t: "assistant", text: "hello there" });
+    expect(s.stream).toEqual([
+      { kind: "user", text: "hi" },
+      { kind: "assistant", text: "hello there" },
+    ]);
+  });
   it("a delta after a tool opens a NEW assistant segment", () => {
     let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
     s = reduce(s, { t: "assistant.delta", text: "Checking…" });
