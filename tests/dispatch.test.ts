@@ -90,3 +90,15 @@ describe("dispatch: session review", () => {
     expect(r.effects).toEqual([]);
   });
 });
+
+describe("dispatch: session transcribing", () => {
+  it("double-press escapes a stuck transcribing back to idle", () => {
+    const r = dispatch(session("transcribing"), "doubleClick");
+    expect(r.state.phase).toBe("idle");
+    expect(r.effects).toEqual([]);
+  });
+  it("tap/scroll are no-ops while transcribing", () => {
+    expect(dispatch(session("transcribing"), "click").state.phase).toBe("transcribing");
+    expect(dispatch(session("transcribing"), "scrollDown").effects).toEqual([]);
+  });
+});

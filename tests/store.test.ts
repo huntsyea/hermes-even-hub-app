@@ -78,6 +78,18 @@ describe("reduce: transcript guard", () => {
     expect(next.pending).toBeNull();
     expect(next.phase).toBe("idle");
   });
+  it("drops an empty/whitespace transcript back to idle (nothing to review)", () => {
+    const s = { ...initialState(), screen: "session" as const, phase: "transcribing" as const };
+    const next = reduce(s, { t: "transcript", text: "   " });
+    expect(next.phase).toBe("idle");
+    expect(next.pending).toBeNull();
+  });
+  it("a non-empty transcript still goes to review", () => {
+    const s = { ...initialState(), screen: "session" as const, phase: "transcribing" as const };
+    const next = reduce(s, { t: "transcript", text: "hello" });
+    expect(next.phase).toBe("review");
+    expect(next.pending).toEqual({ transcript: "hello" });
+  });
 });
 
 describe("barText", () => {

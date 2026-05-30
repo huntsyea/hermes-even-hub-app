@@ -69,9 +69,10 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
     case "turn.done":
       return { ...s, turn: "idle" };
     case "transcript":
-      return s.phase === "transcribing"
+      if (s.phase !== "transcribing") return s;
+      return m.text.trim()
         ? { ...s, pending: { transcript: m.text }, phase: "review" }
-        : s;
+        : { ...s, phase: "idle" };
     default:
       return s;
   }

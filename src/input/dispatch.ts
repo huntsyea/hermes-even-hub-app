@@ -39,6 +39,10 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
     if (g === "doubleClick") return { state: { ...s, phase: "idle" }, effects: [{ kind: "stopMic" }] };
     return { state: s, effects: [] };
   }
+  if (s.phase === "transcribing") {
+    if (g === "doubleClick") return { state: { ...s, phase: "idle" }, effects: [] };
+    return { state: s, effects: [] };
+  }
   if (s.phase === "review") {
     if (g === "click" && s.pending) {
       const text = s.pending.transcript;
