@@ -1,109 +1,36 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderChat, renderSessions } from "../src/ui/views";
-import type { AppState } from "../src/state/store";
-import { initialState } from "../src/state/store";
+import { listRows, renderSession } from "../src/ui/views";
+import { initialState, type AppState } from "../src/state/store";
 
-function fakeBridge() {
-  const textCalls: any[] = [];
-  return {
-    bridge: {
-      textContainerUpgrade: vi.fn(async (arg: any) => { textCalls.push(arg); }),
-      rebuildPageContainer: vi.fn(async () => {}),
-    } as any,
-    textCalls,
-  };
-}
-
-function stateWith(overrides: Partial<AppState>): AppState {
-  return { ...initialState(), ...overrides };
-}
-
-describe("renderChat", () => {
-  it("sets header to active session title", async () => {
-    const { bridge, textCalls } = fakeBridge();
-    const s = stateWith({
-      sessions: {
-        items: [
-          { id: "s1", title: "My Chat", updated: "" },
-          { id: "s2", title: "Other", updated: "" },
-        ],
-        active: "s1",
-      },
-    });
-    await renderChat(bridge, s);
-    const headerCall = textCalls.find((c: any) => c.containerName === "header");
-    expect(headerCall).toBeDefined();
-    expect(headerCall.content).toBe("My Chat");
+describe("listRows", () => {
+  it("prepends the ＋New row before truncated titles", () => {
+    const s: AppState = { ...initialState(), sessions: { items: [{ id: "a", title: "build the app", updated: 0 }], active: "a" } };
+    expect(listRows(s)).toEqual(["＋ New session", "build the app"]);
   });
+});
 
-  it("falls back to 'Hermes' when no active session", async () => {
-    const { bridge, textCalls } = fakeBridge();
-    const s = stateWith({ sessions: { items: [], active: null } });
-    await renderChat(bridge, s);
-    const headerCall = textCalls.find((c: any) => c.containerName === "header");
-    expect(headerCall).toBeDefined();
-    expect(headerCall.content).toBe("Hermes");
+describe("renderSession", () => {
+  it("fills header (title+dot), body (stream), status (bar)", async () => {
+    const calls: Record<number, string> = {};
+    const bridge = {
+      textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }),
+    } as any;
+    const s: AppState = {
+      ...initialState(), screen: "session", phase: "idle", conn: "connected", turn: "idle",
+      sessions: { items: [{ id: "a", title: "build the app", updated: 0 }], active: "a" },
+      stream: [{ kind: "user", text: "hi" }],
+    };
+    await renderSession(bridge, s);
+    expect(calls[1]).toBe("build the app  ●");   // IDS.header
+    expect(calls[2]).toBe("> hi");                // IDS.body
+    expect(calls[3]).toBe("ready for input");     // IDS.status
   });
-
-  it("falls back to 'Hermes' when active id not found in items", async () => {
-    const { bridge, textCalls } = fakeBridge();
-    const s = stateWith({
-      sessions: {
-        items: [{ id: "s1", title: "Chat", updated: "" }],
-        active: "nonexistent",
-      },
-    });
-    await renderChat(bridge, s);
-    const headerCall = textCalls.find((c: any) => c.containerName === "header");
-    expect(headerCall.content).toBe("Hermes");
-  });
-
-  it("uses '(untitled)' for active session with empty title", async () => {
-    const { bridge, textCalls } = fakeBridge();
-    const s = stateWith({
-      sessions: {
-        items: [{ id: "s1", title: "", updated: "" }],
-        active: "s1",
-      },
-    });
-    await renderChat(bridge, s);
-    const headerCall = textCalls.find((c: any) => c.containerName === "header");
-    expect(headerCall.content).toBe("(untitled)");
-  });
-
-  it("still renders body and status", async () => {
-    const { bridge, textCalls } = fakeBridge();
-    const s = stateWith({
-      conn: "connected",
-      chat: { assistant: "Hello world", transcript: "", done: false },
-    });
-    await renderChat(bridge, s);
-    const bodyCall = textCalls.find((c: any) => c.containerName === "body");
-    const statusCall = textCalls.find((c: any) => c.containerName === "status");
-    expect(bodyCall.content).toBe("Hello world");
-    expect(statusCall.content).toBe("connected");
-  });
-
-  it("shows '🎤 listening' in status when recording is true", async () => {
-    const { bridge, textCalls } = fakeBridge();
-    const s = stateWith({
-      recording: true,
-      conn: "connected",
-      chat: { assistant: "", transcript: "", done: false },
-    });
-    await renderChat(bridge, s);
-    const statusCall = textCalls.find((c: any) => c.containerName === "status");
-    expect(statusCall.content).toBe("🎤 listening");
-  });
-
-  it("shows '✓ reply ready' in status when notify is true", async () => {
-    const { bridge, textCalls } = fakeBridge();
-    const s = stateWith({
-      notify: true,
-      chat: { assistant: "Here is the answer", transcript: "", done: true },
-    });
-    await renderChat(bridge, s);
-    const statusCall = textCalls.find((c: any) => c.containerName === "status");
-    expect(statusCall.content).toBe("✓ reply ready");
+  it("shows the pending transcript in the body during review", async () => {
+    const calls: Record<number, string> = {};
+    const bridge = { textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }) } as any;
+    const s: AppState = { ...initialState(), screen: "session", phase: "review", conn: "connected",
+      sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" }, pending: { transcript: "add dark mode" } };
+    await renderSession(bridge, s);
+    expect(calls[2]).toBe('"add dark mode"');
   });
 });

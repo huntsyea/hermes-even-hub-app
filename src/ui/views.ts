@@ -1,38 +1,35 @@
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import type { AppState } from "../state/store";
-import { IDS, setText, buildSessionsPage } from "./render";
+import { barText, connDot } from "../state/store";
+import { IDS, setText, showListPage } from "./render";
+import { streamToText } from "./stream";
 
-const BODY_MAX = 400; // approx chars that fit; tuned later on device
-
-// List row inner width ~= 552px (576 - 2*12 firmware item h-padding). pretext
-// is not installed, so we char-cap instead of pixel-measuring. The firmware
-// font is non-monospaced (~9-11px/char); 48 chars is a conservative fit for
-// 552px. (The SDK .d.ts declares no itemName length cap; tune on device.)
 const ROW_CHARS = 48;
 
-function truncateRow(title: string): string {
+export function truncateRow(title: string): string {
   const t = title.trim() || "(untitled)";
   return t.length <= ROW_CHARS ? t : t.slice(0, ROW_CHARS - 1) + "…";
 }
 
-export async function renderChat(bridge: EvenAppBridge, s: AppState): Promise<void> {
-  // Header: show the active session's title (fall back to "Hermes" pre-connect)
-  const active = s.sessions.items.find((i) => i.id === s.sessions.active);
-  const title = active ? (active.title.trim() || "(untitled)") : "Hermes";
-  await setText(bridge, IDS.header, title);
-
-  const tail = s.chat.assistant.slice(-BODY_MAX);
-  await setText(bridge, IDS.body, tail || s.chat.transcript || "Single-tap to ask");
-  const status = s.recording
-    ? "🎤 listening"
-    : s.chat.tool
-    ? `${s.chat.tool.emoji ?? "⚙"} ${s.chat.tool.name}${s.chat.tool.running ? "…" : " ✓"}`
-    : (s.chat.done ? (s.notify ? "✓ reply ready" : "✓ done") : s.conn);
-  await setText(bridge, IDS.status, status);
+export function listRows(s: AppState): string[] {
+  return ["＋ New session", ...s.sessions.items.map((i) => truncateRow(i.title))];
 }
 
-export async function renderSessions(bridge: EvenAppBridge, s: AppState): Promise<void> {
-  // Lists can't be updated in-place — rebuild the whole page (glasses-ui).
-  const titles = s.sessions.items.map((i) => truncateRow(i.title));
-  await buildSessionsPage(bridge, titles);
+export async function renderList(bridge: EvenAppBridge, s: AppState): Promise<void> {
+  // Lists can't update in place — rebuild the page (glasses-ui).
+  await showListPage(bridge, listRows(s));
+}
+
+export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise<void> {
+  const active = s.sessions.items.find((i) => i.id === s.sessions.active);
+  const title = active ? truncateRow(active.title) : "Hermes";
+  await setText(bridge, IDS.header, `${title}  ${connDot(s.conn)}`);
+
+  const body =
+    s.phase === "review" && s.pending
+      ? `"${s.pending.transcript}"`
+      : streamToText(s.stream) || "tap to speak";
+  await setText(bridge, IDS.body, body);
+
+  await setText(bridge, IDS.status, barText(s));
 }
