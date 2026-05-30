@@ -1,0 +1,20 @@
+name: Bug report
+description: Something isn't working on the glasses / simulator
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Expected vs actual. Console logs from the simulator help.
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes: { label: Steps to reproduce }
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "real G2 glasses / simulator, Even Hub CLI version, bridge version, network (LAN/Tailscale)"
+    validations: { required: true }
