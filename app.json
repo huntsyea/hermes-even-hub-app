@@ -7,7 +7,8 @@
   "min_sdk_version": "0.0.10",
   "entrypoint": "index.html",
   "permissions": [
-    { "name": "network", "desc": "Connect to local Hermes bridge", "whitelist": ["ws://10.0.0.2:8765"] }
+    { "name": "network", "desc": "Connect to local Hermes bridge", "whitelist": ["ws://10.0.0.2:8765"] },
+    { "name": "microphone", "desc": "Voice input for Hermes agent" }
   ],
   "supported_languages": [
     "en"
