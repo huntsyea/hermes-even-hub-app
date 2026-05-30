@@ -11,6 +11,8 @@ import { serializeLatest } from "./util/coalesce";
 import { createCapture } from "./audio/capture";
 import { saveConnectionState, loadConnectionState } from "./storage/persist";
 
+const fireAndForget = (p: Promise<unknown>): void => { void p.catch(() => {}); };
+
 async function boot(): Promise<void> {
   const bridge = await waitForEvenAppBridge();
   let state: AppState = initialState();
@@ -34,9 +36,9 @@ async function boot(): Promise<void> {
         scheduleRender(state);
         if (m.t === "hello.ok") {
           client.send(sessionsList()); // populate the list once connected
-          void saveConnectionState(bridge, currentUrl, m.active ?? "");
+          fireAndForget(saveConnectionState(bridge, currentUrl, m.active ?? ""));
         }
-        if (m.t === "active") void saveConnectionState(bridge, currentUrl, m.id);
+        if (m.t === "active") fireAndForget(saveConnectionState(bridge, currentUrl, m.id));
       },
       onStatus: (s) => { state = { ...state, conn: s }; scheduleRender(state); },
     },
@@ -80,7 +82,7 @@ async function boot(): Promise<void> {
     const et = e.sysEvent?.eventType ?? e.listEvent?.eventType ?? e.textEvent?.eventType;
     // Lifecycle: background = flush only; system/abnormal exit = teardown.
     if (et === OsEventTypeList.FOREGROUND_EXIT_EVENT) {
-      void saveConnectionState(bridge, currentUrl, state.sessions.active ?? "");
+      fireAndForget(saveConnectionState(bridge, currentUrl, state.sessions.active ?? ""));
       return;
     }
     if (et === OsEventTypeList.SYSTEM_EXIT_EVENT || et === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
@@ -88,10 +90,10 @@ async function boot(): Promise<void> {
       return;
     }
     routeEvent(e, {
-      onClick: (index) => { void applyGesture("click", index); },
-      onDoubleClick: () => { void applyGesture("doubleClick"); },
-      onScrollUp: () => { void applyGesture("scrollUp"); },
-      onScrollDown: () => { void applyGesture("scrollDown"); },
+      onClick: (index) => { fireAndForget(applyGesture("click", index)); },
+      onDoubleClick: () => { fireAndForget(applyGesture("doubleClick")); },
+      onScrollUp: () => { fireAndForget(applyGesture("scrollUp")); },
+      onScrollDown: () => { fireAndForget(applyGesture("scrollDown")); },
     });
   });
 
