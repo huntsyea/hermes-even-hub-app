@@ -32,3 +32,33 @@ describe("dispatch: list", () => {
     expect(r.state.screen).toBe("list");
   });
 });
+
+function session(phase: AppState["phase"]): AppState {
+  return { ...initialState(), screen: "session", phase };
+}
+
+describe("dispatch: session idle", () => {
+  it("tap starts recording", () => {
+    const r = dispatch(session("idle"), "click");
+    expect(r.state.phase).toBe("recording");
+    expect(r.effects).toEqual([{ kind: "startMic" }]);
+  });
+  it("double-press returns to the list", () => {
+    const r = dispatch(session("idle"), "doubleClick");
+    expect(r.state.screen).toBe("list");
+    expect(r.effects).toEqual([]);
+  });
+});
+
+describe("dispatch: session recording", () => {
+  it("tap stops + moves to transcribing", () => {
+    const r = dispatch(session("recording"), "click");
+    expect(r.state.phase).toBe("transcribing");
+    expect(r.effects).toEqual([{ kind: "stopMic" }]);
+  });
+  it("double-press cancels back to idle (still stops the mic)", () => {
+    const r = dispatch(session("recording"), "doubleClick");
+    expect(r.state.phase).toBe("idle");
+    expect(r.effects).toEqual([{ kind: "stopMic" }]);
+  });
+});

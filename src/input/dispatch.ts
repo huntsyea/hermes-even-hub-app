@@ -28,5 +28,16 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
     if (g === "doubleClick") return { state: s, effects: [{ kind: "exit" }] };
     return { state: s, effects: [] };
   }
+  // screen === "session"
+  if (s.phase === "idle") {
+    if (g === "click") return { state: { ...s, phase: "recording" }, effects: [{ kind: "startMic" }] };
+    if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [] };
+    return { state: s, effects: [] };
+  }
+  if (s.phase === "recording") {
+    if (g === "click") return { state: { ...s, phase: "transcribing" }, effects: [{ kind: "stopMic" }] };
+    if (g === "doubleClick") return { state: { ...s, phase: "idle" }, effects: [{ kind: "stopMic" }] };
+    return { state: s, effects: [] };
+  }
   return { state: s, effects: [] };
 }
