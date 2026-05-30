@@ -21,7 +21,8 @@ describe("renderSession", () => {
       stream: [{ kind: "user", text: "hi" }],
     };
     await renderSession(bridge, s);
-    expect(calls[1]).toBe("build the app  ●");   // IDS.header
+    expect(calls[1]).toBe("build the app");      // IDS.header (title only)
+    expect(calls[5]).toBe("●");                   // IDS.dot (far-right)
     expect(calls[2]).toBe("> hi");                // IDS.body
     expect(calls[3]).toBe("ready for input");     // IDS.status
   });
@@ -32,5 +33,19 @@ describe("renderSession", () => {
       sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" }, pending: { transcript: "add dark mode" } };
     await renderSession(bridge, s);
     expect(calls[2]).toBe('"add dark mode"');
+  });
+  it("renders the held page when scrollPage is an absolute index", async () => {
+    const calls: Record<number, string> = {};
+    const bridge = { textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }) } as any;
+    const big = "x".repeat(800); // multiple pages at the 360-char budget
+    const s: AppState = {
+      ...initialState(), screen: "session", phase: "idle", conn: "connected",
+      sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" },
+      stream: [{ kind: "user", text: "hi" }, { kind: "assistant", text: big }],
+      scrollPage: 0,
+    };
+    const { threadPages } = await import("../src/ui/stream");
+    await renderSession(bridge, s);
+    expect(calls[2]).toBe(threadPages(s.stream)[0]); // IDS.body shows page 0
   });
 });

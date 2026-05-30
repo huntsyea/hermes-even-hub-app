@@ -29,19 +29,37 @@ describe("reduce: sessions", () => {
 });
 
 describe("reduce: stream", () => {
-  it("appends assistant deltas to the trailing segment", () => {
+  it("assistant output BEFORE the first user item is a banner", () => {
     let s = initialState();
+    s = reduce(s, { t: "assistant.delta", text: "model: x" });
+    s = reduce(s, { t: "assistant.delta", text: "\ncwd: y" });
+    expect(s.stream).toEqual([{ kind: "banner", text: "model: x\ncwd: y" }]);
+  });
+  it("assistant output AFTER a user item is assistant text", () => {
+    let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
     s = reduce(s, { t: "assistant.delta", text: "It's" });
     s = reduce(s, { t: "assistant.delta", text: " Friday" });
-    expect(s.stream).toEqual([{ kind: "assistant", text: "It's Friday" }]);
+    expect(s.stream).toEqual([
+      { kind: "user", text: "hi" },
+      { kind: "assistant", text: "It's Friday" },
+    ]);
   });
-  it("a delta after a tool opens a NEW segment (no duplication across tools)", () => {
-    let s = initialState();
+  it("a full assistant frame after a user item appends assistant text", () => {
+    let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
+    s = reduce(s, { t: "assistant", text: "hello there" });
+    expect(s.stream).toEqual([
+      { kind: "user", text: "hi" },
+      { kind: "assistant", text: "hello there" },
+    ]);
+  });
+  it("a delta after a tool opens a NEW assistant segment", () => {
+    let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
     s = reduce(s, { t: "assistant.delta", text: "Checking…" });
     s = reduce(s, { t: "tool.start", name: "terminal" });
     s = reduce(s, { t: "tool.end", name: "terminal", ok: true });
     s = reduce(s, { t: "assistant.delta", text: "Done." });
     expect(s.stream).toEqual([
+      { kind: "user", text: "hi" },
       { kind: "assistant", text: "Checking…" },
       { kind: "tool", name: "terminal", running: false, ok: true },
       { kind: "assistant", text: "Done." },

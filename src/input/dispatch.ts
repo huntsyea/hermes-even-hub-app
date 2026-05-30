@@ -1,5 +1,6 @@
 import type { AppState } from "../state/store";
-import { sessionsNew, sessionsSwitch, textMsg } from "../protocol";
+import { sessionsNew, sessionsSwitch, textMsg, sessionsList } from "../protocol";
+import { threadPages } from "../ui/stream";
 
 export type Gesture = "click" | "doubleClick" | "scrollUp" | "scrollDown";
 
@@ -13,6 +14,7 @@ export interface DispatchResult { state: AppState; effects: Effect[]; }
 
 const enterSession = (s: AppState, active: string | null): AppState => ({
   ...s, screen: "session", phase: "idle", stream: [], pending: null, turn: "idle",
+  scrollPage: null,
   sessions: { ...s.sessions, active },
 });
 
@@ -31,7 +33,19 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
   // screen === "session"
   if (s.phase === "idle") {
     if (g === "click") return { state: { ...s, phase: "recording" }, effects: [{ kind: "startMic" }] };
-    if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [] };
+    if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [{ kind: "send", frame: sessionsList() }] };
+    if (g === "scrollUp") {
+      const pages = threadPages(s.stream);
+      const cur = s.scrollPage === null ? pages.length - 1 : s.scrollPage;
+      if (cur === 0) return { state: s, effects: [] }; // at first page → stay in follow mode
+      return { state: { ...s, scrollPage: cur - 1 }, effects: [] };
+    }
+    if (g === "scrollDown") {
+      if (s.scrollPage === null) return { state: s, effects: [] };
+      const pages = threadPages(s.stream);
+      const next = s.scrollPage + 1;
+      return { state: { ...s, scrollPage: next >= pages.length - 1 ? null : next }, effects: [] };
+    }
     return { state: s, effects: [] };
   }
   if (s.phase === "recording") {
@@ -52,7 +66,7 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
       };
     }
     if (g === "scrollDown") return { state: { ...s, pending: null, phase: "idle" }, effects: [] };
-    if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [] };
+    if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [{ kind: "send", frame: sessionsList() }] };
     return { state: s, effects: [] };
   }
   return { state: s, effects: [] };

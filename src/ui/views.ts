@@ -2,7 +2,7 @@ import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import type { AppState } from "../state/store";
 import { barText, connDot } from "../state/store";
 import { IDS, setText, showListPage } from "./render";
-import { streamToText } from "./stream";
+import { threadPages } from "./stream";
 
 const ROW_CHARS = 48;
 
@@ -22,14 +22,23 @@ export async function renderList(bridge: EvenAppBridge, s: AppState): Promise<vo
 
 export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise<void> {
   const active = s.sessions.items.find((i) => i.id === s.sessions.active);
-  const title = active ? truncateRow(active.title) : "Hermes";
-  await setText(bridge, IDS.header, `${title}  ${connDot(s.conn)}`);
+  const title = active && active.title.trim() ? truncateRow(active.title) : "Hermes";
+  await setText(bridge, IDS.header, title);
+  await setText(bridge, IDS.dot, connDot(s.conn));
 
   const body =
     s.phase === "review" && s.pending
       ? `"${s.pending.transcript}"`
-      : streamToText(s.stream) || "tap to speak";
+      : s.stream.length === 0
+        ? "tap to speak"
+        : threadPage(s);
   await setText(bridge, IDS.body, body);
 
   await setText(bridge, IDS.status, barText(s));
+}
+
+function threadPage(s: AppState): string {
+  const pages = threadPages(s.stream);
+  const idx = s.scrollPage === null ? pages.length - 1 : Math.min(s.scrollPage, pages.length - 1);
+  return pages[idx] ?? "";
 }

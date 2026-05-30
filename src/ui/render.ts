@@ -5,28 +5,30 @@ import {
 } from "@evenrealities/even_hub_sdk";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 
-export const IDS = { header: 1, body: 2, status: 3, list: 4 } as const;
+export const IDS = { header: 1, body: 2, status: 3, list: 4, dot: 5 } as const;
 export const NAMES: Record<number, string> = {
-  [IDS.header]: "header", [IDS.body]: "body", [IDS.status]: "status", [IDS.list]: "list",
+  [IDS.header]: "header", [IDS.body]: "body", [IDS.status]: "status",
+  [IDS.list]: "list", [IDS.dot]: "dot",
 };
 
-// The 3 chat text containers, shared by showSessionPage (rebuildPageContainer).
+// The 4 chat text containers (header, dot, body, status), shared by showSessionPage.
 // createStartUpPageContainer is one-shot, so the startup page is the list;
-// re-entering a session uses rebuildPageContainer with these 3 text containers.
+// re-entering a session uses rebuildPageContainer with these 4 text containers.
 function chatTextObjects(): TextContainerProperty[] {
   return [
-    new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0, yPosition: 0,   width: 576, height: 40,  paddingLength: 4, content: "Hermes" }),
-    new TextContainerProperty({ containerID: IDS.body,   containerName: "body",   xPosition: 0, yPosition: 44,  width: 576, height: 200, paddingLength: 4, content: "", isEventCapture: 1 }),
-    new TextContainerProperty({ containerID: IDS.status, containerName: "status", xPosition: 0, yPosition: 248, width: 576, height: 36,  paddingLength: 4, content: "connecting…" }),
+    new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0,   yPosition: 0,   width: 540, height: 40,  paddingLength: 4, content: "Hermes" }),
+    new TextContainerProperty({ containerID: IDS.dot,    containerName: "dot",    xPosition: 540, yPosition: 0,   width: 36,  height: 40,  paddingLength: 4, content: "◌" }),
+    new TextContainerProperty({ containerID: IDS.body,   containerName: "body",   xPosition: 0,   yPosition: 44,  width: 576, height: 200, paddingLength: 4, content: "", isEventCapture: 1 }),
+    new TextContainerProperty({ containerID: IDS.status, containerName: "status", xPosition: 0,   yPosition: 248, width: 576, height: 36,  paddingLength: 4, content: "connecting…" }),
   ];
 }
 
-// Session page: the three text containers (header / body / status), reused for
+// Session page: the four text containers (header / dot / body / status), reused for
 // every session render. createStartUpPageContainer is one-shot, so re-entering a
 // session uses rebuildPageContainer; renderSession() then fills content in-place.
 export async function showSessionPage(bridge: EvenAppBridge): Promise<void> {
   await bridge.rebuildPageContainer(new RebuildPageContainer({
-    containerTotalNum: 3,
+    containerTotalNum: 4,
     textObject: chatTextObjects(),
   }));
 }

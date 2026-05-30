@@ -37,11 +37,11 @@ describe("list pages", () => {
 });
 
 describe("session page", () => {
-  it("showSessionPage rebuilds three text containers", async () => {
+  it("showSessionPage rebuilds four text containers (header, dot, body, status)", async () => {
     const b = fakeBridge();
     await showSessionPage(b);
     const arg = b.rebuildPageContainer.mock.calls[0][0];
-    expect(arg.containerTotalNum).toBe(3);
-    expect(arg.textObject).toHaveLength(3);
+    expect(arg.containerTotalNum).toBe(4);
+    expect(arg.textObject).toHaveLength(4);
   });
 });
