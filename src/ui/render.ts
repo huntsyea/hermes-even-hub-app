@@ -11,9 +11,9 @@ export const NAMES: Record<number, string> = {
   [IDS.list]: "list", [IDS.dot]: "dot",
 };
 
-// The 3 chat text containers, shared by showSessionPage (rebuildPageContainer).
+// The 4 chat text containers (header, dot, body, status), shared by showSessionPage.
 // createStartUpPageContainer is one-shot, so the startup page is the list;
-// re-entering a session uses rebuildPageContainer with these 3 text containers.
+// re-entering a session uses rebuildPageContainer with these 4 text containers.
 function chatTextObjects(): TextContainerProperty[] {
   return [
     new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0,   yPosition: 0,   width: 540, height: 40,  paddingLength: 4, content: "Hermes" }),
