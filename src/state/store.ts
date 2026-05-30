@@ -68,6 +68,10 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
       return { ...s, stream: patchTool(s.stream, m.name, m.ok) };
     case "turn.done":
       return { ...s, turn: "idle" };
+    case "transcript":
+      return s.phase === "transcribing"
+        ? { ...s, pending: { transcript: m.text }, phase: "review" }
+        : s;
     default:
       return s;
   }

@@ -64,3 +64,18 @@ describe("reduce: stream", () => {
     expect(s.turn).toBe("idle");
   });
 });
+
+describe("reduce: transcript guard", () => {
+  it("sets pending + review only when phase is transcribing", () => {
+    const s = { ...initialState(), screen: "session" as const, phase: "transcribing" as const };
+    const next = reduce(s, { t: "transcript", text: "add dark mode" });
+    expect(next.pending).toEqual({ transcript: "add dark mode" });
+    expect(next.phase).toBe("review");
+  });
+  it("ignores a transcript that arrives in any other phase (cancel path)", () => {
+    const s = { ...initialState(), screen: "session" as const, phase: "idle" as const };
+    const next = reduce(s, { t: "transcript", text: "stale" });
+    expect(next.pending).toBeNull();
+    expect(next.phase).toBe("idle");
+  });
+});
