@@ -11,6 +11,7 @@ export type ServerMsg =
   | { t: "active"; id: string }
   | { t: "transcript"; text: string }
   | { t: "assistant"; text: string }
+  | { t: "assistant.delta"; text: string }
   | { t: "tool.start"; name: string; label?: string; emoji?: string }
   | { t: "tool.end"; name: string; ok: boolean }
   | { t: "turn.done" }
@@ -22,6 +23,7 @@ const SERVER_TYPES = new Set([
   "active",
   "transcript",
   "assistant",
+  "assistant.delta",
   "tool.start",
   "tool.end",
   "turn.done",

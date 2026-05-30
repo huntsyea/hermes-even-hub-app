@@ -27,3 +27,40 @@ describe("reduce: sessions", () => {
     expect(s.sessions.active).toBe("y");
   });
 });
+
+describe("reduce: stream", () => {
+  it("appends assistant deltas to the trailing segment", () => {
+    let s = initialState();
+    s = reduce(s, { t: "assistant.delta", text: "It's" });
+    s = reduce(s, { t: "assistant.delta", text: " Friday" });
+    expect(s.stream).toEqual([{ kind: "assistant", text: "It's Friday" }]);
+  });
+  it("a delta after a tool opens a NEW segment (no duplication across tools)", () => {
+    let s = initialState();
+    s = reduce(s, { t: "assistant.delta", text: "Checking…" });
+    s = reduce(s, { t: "tool.start", name: "terminal" });
+    s = reduce(s, { t: "tool.end", name: "terminal", ok: true });
+    s = reduce(s, { t: "assistant.delta", text: "Done." });
+    expect(s.stream).toEqual([
+      { kind: "assistant", text: "Checking…" },
+      { kind: "tool", name: "terminal", running: false, ok: true },
+      { kind: "assistant", text: "Done." },
+    ]);
+  });
+  it("pushes a running tool on tool.start and sets turn=working", () => {
+    let s = reduce(initialState(), { t: "tool.start", name: "terminal" });
+    expect(s.turn).toBe("working");
+    expect(s.stream).toEqual([{ kind: "tool", name: "terminal", running: true }]);
+  });
+  it("patches the matching running tool to done on tool.end", () => {
+    let s = initialState();
+    s = reduce(s, { t: "tool.start", name: "terminal" });
+    s = reduce(s, { t: "tool.end", name: "terminal", ok: true });
+    expect(s.stream).toEqual([{ kind: "tool", name: "terminal", running: false, ok: true }]);
+  });
+  it("sets turn=idle on turn.done", () => {
+    let s = reduce(initialState(), { t: "tool.start", name: "x" });
+    s = reduce(s, { t: "turn.done" });
+    expect(s.turn).toBe("idle");
+  });
+});
