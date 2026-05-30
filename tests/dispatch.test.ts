@@ -134,4 +134,12 @@ describe("dispatch: session idle scrolling", () => {
     const r = dispatch({ ...longSession(), scrollPage: null }, "scrollDown");
     expect(r.state.scrollPage).toBeNull();
   });
+  it("scrollUp on a single-page stream stays in follow mode (no-op)", () => {
+    const s: AppState = {
+      ...initialState(), screen: "session", phase: "idle",
+      stream: [{ kind: "user", text: "hi" }],
+    };
+    const r = dispatch(s, "scrollUp");
+    expect(r.state.scrollPage).toBeNull();
+  });
 });

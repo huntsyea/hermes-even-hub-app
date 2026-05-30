@@ -37,7 +37,8 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
     if (g === "scrollUp") {
       const pages = threadPages(s.stream);
       const cur = s.scrollPage === null ? pages.length - 1 : s.scrollPage;
-      return { state: { ...s, scrollPage: Math.max(0, cur - 1) }, effects: [] };
+      if (cur === 0) return { state: s, effects: [] }; // at first page → stay in follow mode
+      return { state: { ...s, scrollPage: cur - 1 }, effects: [] };
     }
     if (g === "scrollDown") {
       if (s.scrollPage === null) return { state: s, effects: [] };
