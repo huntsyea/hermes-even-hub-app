@@ -1,42 +1,34 @@
 import type { ServerMsg, SessionItem } from "../protocol";
 
-export type View = "chat" | "sessions";
+export type Screen = "list" | "session";
+export type Phase = "idle" | "recording" | "transcribing" | "review";
+export type Turn = "idle" | "thinking" | "working";
 
-export interface ToolStatus { name: string; emoji?: string; running: boolean; }
-
-export interface ChatState {
-  assistant: string;
-  transcript: string;
-  tool?: ToolStatus;
-  done: boolean;
-}
+export type StreamItem =
+  | { kind: "user"; text: string }
+  | { kind: "tool"; name: string; running: boolean; ok?: boolean }
+  | { kind: "assistant"; text: string };
 
 export interface AppState {
-  view: View;
+  screen: Screen;
+  phase: Phase;
   conn: string;
-  recording: boolean;
-  notify: boolean;
   sessions: { items: SessionItem[]; active: string | null };
-  chat: ChatState;
+  stream: StreamItem[];
+  pending: { transcript: string } | null;
+  turn: Turn;
 }
 
 export function initialState(): AppState {
   return {
-    view: "chat",
-    conn: "init",
-    recording: false,
-    notify: false,
+    screen: "list",
+    phase: "idle",
+    conn: "connecting",
     sessions: { items: [], active: null },
-    chat: { assistant: "", transcript: "", done: false },
+    stream: [],
+    pending: null,
+    turn: "idle",
   };
-}
-
-export function selectSessionId(s: AppState, index: number): string | undefined {
-  return s.sessions.items[index]?.id;
-}
-
-export function setView(s: AppState, view: View): AppState {
-  return { ...s, view, notify: view === "chat" ? false : s.notify };
 }
 
 export function reduce(s: AppState, m: ServerMsg): AppState {
@@ -46,17 +38,7 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
     case "sessions":
       return { ...s, sessions: { items: m.items, active: m.active } };
     case "active":
-      return { ...s, sessions: { ...s.sessions, active: m.id }, chat: initialState().chat };
-    case "transcript":
-      return { ...s, chat: { ...s.chat, transcript: m.text } };
-    case "assistant":
-      return { ...s, chat: { ...s.chat, assistant: m.text, done: false } };
-    case "tool.start":
-      return { ...s, chat: { ...s.chat, tool: { name: m.name, emoji: m.emoji, running: true } } };
-    case "tool.end":
-      return { ...s, chat: { ...s.chat, tool: s.chat.tool ? { ...s.chat.tool, running: false } : undefined } };
-    case "turn.done":
-      return { ...s, notify: s.view !== "chat" ? true : s.notify, chat: { ...s.chat, done: true, tool: undefined } };
+      return { ...s, sessions: { ...s.sessions, active: m.id } };
     case "error":
       return { ...s, conn: `error: ${m.msg}` };
     default:
