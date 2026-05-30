@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { getTextWidth } from "@evenrealities/pretext";
 import { streamToText, paginate, threadPages } from "../src/ui/stream";
 import type { StreamItem } from "../src/state/store";
 
-const RULE = "─".repeat(40);
+const RULE = "─".repeat(26);
 
 describe("streamToText", () => {
   it("> user, ▸ tool (running/done/failed), plain assistant", () => {
@@ -63,5 +64,17 @@ describe("threadPages", () => {
   it("renders then paginates the stream", () => {
     const items: StreamItem[] = [{ kind: "user", text: "hi" }];
     expect(threadPages(items)).toEqual(["> hi"]);
+  });
+});
+
+// body container: width 576, paddingLength 4 → 568px usable (see ui/render.ts)
+const BODY_INNER_PX = 576 - 2 * 4;
+
+describe("banner divider", () => {
+  it("every banner line fits one display line", () => {
+    const out = streamToText([{ kind: "banner", text: "model: claude\ncwd: /home/u" }]);
+    for (const line of out.split("\n")) {
+      expect(getTextWidth(line)).toBeLessThanOrEqual(BODY_INNER_PX);
+    }
   });
 });

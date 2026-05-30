@@ -1,6 +1,8 @@
 import type { StreamItem } from "../state/store";
 
-const RULE = "─".repeat(40);
+// 26 box-drawing chars = 520px; body usable width is 568px (one ─ = 20px,
+// measured via @evenrealities/pretext). 40 chars (800px) wrapped to 2 lines.
+const RULE = "─".repeat(26);
 
 function renderItem(it: StreamItem): string {
   if (it.kind === "user") return `> ${it.text}`;
