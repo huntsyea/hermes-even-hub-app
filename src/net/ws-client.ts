@@ -10,6 +10,8 @@ export class BridgeClient {
   private idx = 0;
   private delay = 500;
   private alive = true;
+  private watchdog?: ReturnType<typeof setInterval>;
+  private lastRecv = 0;
 
   constructor(o: Opts, d: Deps) {
     this.o = o;
@@ -28,11 +30,19 @@ export class BridgeClient {
       this.delay = 500;
       this.d.onStatus?.("connected");
       (ws as any).send(hello(this.o.token, "g2"));
+      this.lastRecv = Date.now();
+      this.watchdog = setInterval(() => {
+        if (Date.now() - this.lastRecv >= 45_000) {
+          (this.ws as any)?.close(); // triggers reconnect
+        }
+      }, 15_000);
     };
     (ws as any).onmessage = (e: { data: string }) => {
+      this.lastRecv = Date.now();
       try { this.d.onMessage(parseServer(String(e.data))); } catch { /* ignore malformed */ }
     };
     (ws as any).onclose = () => {
+      clearInterval(this.watchdog);
       if (!this.alive) return;
       this.idx++;
       this.d.onStatus?.("reconnecting");
@@ -52,6 +62,7 @@ export class BridgeClient {
 
   close(): void {
     this.alive = false;
+    clearInterval(this.watchdog);
     (this.ws as any)?.close();
   }
 }

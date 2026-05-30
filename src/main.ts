@@ -5,22 +5,44 @@ import { initialState, reduce, selectSessionId, setView, type AppState } from ".
 import { buildChatPage, buildSessionsPage, showChatPage } from "./ui/render";
 import { renderChat, renderSessions } from "./ui/views";
 import { routeEvent } from "./input/router";
-import { textMsg, sessionsList, sessionsSwitch, sessionsNew } from "./protocol";
+import { textMsg, sessionsList, sessionsSwitch, sessionsNew, stopMsg } from "./protocol";
 import { serializeLatest } from "./util/coalesce";
 import { createCapture } from "./audio/capture";
+import { saveConnectionState, loadConnectionState } from "./storage/persist";
 
 async function boot(): Promise<void> {
   const bridge = await waitForEvenAppBridge();
   await buildChatPage(bridge);
   let state: AppState = initialState();
   const cfg = loadConfig();
+
+  // Restore last-good URL from SDK localStorage so Tailscale/LAN preference is preserved.
+  const persisted = await loadConnectionState(bridge);
+  const urls = persisted.url
+    ? [persisted.url, cfg.lanUrl, cfg.remoteUrl].filter(Boolean)
+    : [cfg.lanUrl, cfg.remoteUrl];
+
   const scheduleRender = serializeLatest((s: AppState) =>
     s.view === "sessions" ? renderSessions(bridge, s) : renderChat(bridge, s));
+
+  let currentUrl = urls[0] ?? "";
   const client = new BridgeClient(
-    { urls: [cfg.lanUrl, cfg.remoteUrl], token: cfg.token },
+    { urls, token: cfg.token },
     {
-      onMessage: (m) => { state = reduce(state, m); scheduleRender(state); },
-      onStatus: (s) => { state = { ...state, conn: s }; scheduleRender(state); },
+      onMessage: (m) => {
+        state = reduce(state, m);
+        scheduleRender(state);
+        // Persist connection state when we know the active session.
+        if (m.t === "hello.ok" || m.t === "active") {
+          const sessionId = m.t === "hello.ok" ? (m.active ?? "") : m.id;
+          void saveConnectionState(bridge, currentUrl, sessionId);
+        }
+      },
+      onStatus: (s, url?: string) => {
+        if (url) currentUrl = url;
+        state = { ...state, conn: s };
+        scheduleRender(state);
+      },
     },
   );
   client.connect();
@@ -78,7 +100,14 @@ async function boot(): Promise<void> {
         }
         // Sessions: scroll is handled natively by firmware
       },
-      onScrollDown: () => {},
+      onScrollDown: () => {
+        if (state.view === "chat") {
+          // Send stop to interrupt the active assistant turn.
+          // Note: the bridge currently treats this as a no-op (SSE stream can't be cancelled mid-flight).
+          // The turn will finish naturally; this is a v1 placeholder for future cancellation support.
+          client.send(stopMsg());
+        }
+      },
       onForegroundExit: () => teardown(),
     });
   });
