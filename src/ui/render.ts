@@ -5,9 +5,10 @@ import {
 } from "@evenrealities/even_hub_sdk";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 
-export const IDS = { header: 1, body: 2, status: 3, list: 4 } as const;
+export const IDS = { header: 1, body: 2, status: 3, list: 4, dot: 5 } as const;
 export const NAMES: Record<number, string> = {
-  [IDS.header]: "header", [IDS.body]: "body", [IDS.status]: "status", [IDS.list]: "list",
+  [IDS.header]: "header", [IDS.body]: "body", [IDS.status]: "status",
+  [IDS.list]: "list", [IDS.dot]: "dot",
 };
 
 // The 3 chat text containers, shared by showSessionPage (rebuildPageContainer).
@@ -15,9 +16,10 @@ export const NAMES: Record<number, string> = {
 // re-entering a session uses rebuildPageContainer with these 3 text containers.
 function chatTextObjects(): TextContainerProperty[] {
   return [
-    new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0, yPosition: 0,   width: 576, height: 40,  paddingLength: 4, content: "Hermes" }),
-    new TextContainerProperty({ containerID: IDS.body,   containerName: "body",   xPosition: 0, yPosition: 44,  width: 576, height: 200, paddingLength: 4, content: "", isEventCapture: 1 }),
-    new TextContainerProperty({ containerID: IDS.status, containerName: "status", xPosition: 0, yPosition: 248, width: 576, height: 36,  paddingLength: 4, content: "connecting…" }),
+    new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0,   yPosition: 0,   width: 540, height: 40,  paddingLength: 4, content: "Hermes" }),
+    new TextContainerProperty({ containerID: IDS.dot,    containerName: "dot",    xPosition: 540, yPosition: 0,   width: 36,  height: 40,  paddingLength: 4, content: "◌" }),
+    new TextContainerProperty({ containerID: IDS.body,   containerName: "body",   xPosition: 0,   yPosition: 44,  width: 576, height: 200, paddingLength: 4, content: "", isEventCapture: 1 }),
+    new TextContainerProperty({ containerID: IDS.status, containerName: "status", xPosition: 0,   yPosition: 248, width: 576, height: 36,  paddingLength: 4, content: "connecting…" }),
   ];
 }
 
@@ -26,7 +28,7 @@ function chatTextObjects(): TextContainerProperty[] {
 // session uses rebuildPageContainer; renderSession() then fills content in-place.
 export async function showSessionPage(bridge: EvenAppBridge): Promise<void> {
   await bridge.rebuildPageContainer(new RebuildPageContainer({
-    containerTotalNum: 3,
+    containerTotalNum: 4,
     textObject: chatTextObjects(),
   }));
 }

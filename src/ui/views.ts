@@ -22,8 +22,9 @@ export async function renderList(bridge: EvenAppBridge, s: AppState): Promise<vo
 
 export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise<void> {
   const active = s.sessions.items.find((i) => i.id === s.sessions.active);
-  const title = active ? truncateRow(active.title) : "Hermes";
-  await setText(bridge, IDS.header, `${title}  ${connDot(s.conn)}`);
+  const title = active && active.title.trim() ? truncateRow(active.title) : "Hermes";
+  await setText(bridge, IDS.header, title);
+  await setText(bridge, IDS.dot, connDot(s.conn));
 
   const body =
     s.phase === "review" && s.pending

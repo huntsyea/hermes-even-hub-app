@@ -21,7 +21,8 @@ describe("renderSession", () => {
       stream: [{ kind: "user", text: "hi" }],
     };
     await renderSession(bridge, s);
-    expect(calls[1]).toBe("build the app  ●");   // IDS.header
+    expect(calls[1]).toBe("build the app");      // IDS.header (title only)
+    expect(calls[5]).toBe("●");                   // IDS.dot (far-right)
     expect(calls[2]).toBe("> hi");                // IDS.body
     expect(calls[3]).toBe("ready for input");     // IDS.status
   });
