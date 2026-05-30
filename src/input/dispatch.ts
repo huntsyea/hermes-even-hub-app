@@ -61,7 +61,7 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
     if (g === "click" && s.pending) {
       const text = s.pending.transcript;
       return {
-        state: { ...s, stream: [...s.stream, { kind: "user", text }], pending: null, phase: "idle", turn: "thinking" },
+        state: { ...s, stream: [...s.stream, { kind: "user", text }], pending: null, phase: "idle", turn: "thinking", scrollPage: null },
         effects: [{ kind: "send", frame: textMsg(text) }],
       };
     }

@@ -90,6 +90,10 @@ describe("dispatch: session review", () => {
     expect(r.state.pending).toBeNull();
     expect(r.effects).toEqual([{ kind: "send", frame: sessionsList() }]);
   });
+  it("tap send resets scroll to follow mode (null)", () => {
+    const r = dispatch({ ...review("hello"), scrollPage: 3 }, "click");
+    expect(r.state.scrollPage).toBeNull();
+  });
 });
 
 describe("dispatch: session transcribing", () => {
