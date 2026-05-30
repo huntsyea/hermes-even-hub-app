@@ -22,6 +22,15 @@
 
 ## Status (2026-05-29)
 
+> **⚠ Interaction model REDESIGNED (branch `feat/terminal-mode-redesign`).** The original
+> tap-to-send chat model below was replaced with a list-first, voice-only **Terminal-mode**
+> model: boot to the session list → open/create → tap-record → review transcript →
+> tap-send; double-press = back/exit. Assistant text now streams as incremental
+> `assistant.delta` frames; `audio.stop` returns a transcript only (the turn runs on an
+> explicit `text` frame). See `docs/superpowers/specs/2026-05-29-terminal-mode-redesign-design.md`
+> and `docs/superpowers/plans/2026-05-29-terminal-mode-redesign.md`. The milestone notes
+> below describe the pre-redesign build; transport/ASR/streaming/persistence are reused.
+
 - **M0, M1 — DONE.** Round-trip proven end-to-end against the live gateway.
 - **M2 — DONE** via the hot-path audit (F1 serialize/coalesce, F2 full-replace params, F3 teardown-on-exit).
 - **M3 — DONE.** Sessions list/switch/new, view-aware gestures, page switching. Chat header shows active session title.

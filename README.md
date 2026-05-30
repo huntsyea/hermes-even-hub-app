@@ -59,40 +59,46 @@ npm run pack         # Build + package as .ehpk
 npm run test         # Run vitest suite
 ```
 
-## Gesture Map
+## Interaction model (Terminal-style)
 
-### Chat view
+The app is list-first and voice-only, mirroring Even Realities Terminal mode. It boots
+to the session list; you open or create a session, then drive it by voice:
+tap to record, tap to stop, review the transcript, tap to send.
 
-| Gesture | Action |
-|---------|--------|
-| Single tap | Send a text turn |
-| Double tap | Toggle mic (voice input) |
-| Scroll up | Open sessions list |
-| Scroll down | Stop/interrupt active turn |
+States: `list → session(idle) → recording → transcribing → review → idle`.
 
-### Sessions view
+### Gesture Map
 
-| Gesture | Action |
-|---------|--------|
-| Single tap | Switch to highlighted session |
-| Double tap | Create new session |
-| Scroll | Native firmware list scrolling |
+| State | Swipe ↑/↓ | Tap | Double-press |
+|-------|-----------|-----|--------------|
+| **List** | scroll sessions | open highlighted row / `＋New` | **exit app** (system dialog) |
+| **Session · idle** | scroll chat history | **start recording** | back to list |
+| **Session · recording** | — | **stop → transcribe → review** | cancel recording → idle |
+| **Session · review** | ↓ = **redo** (discard, re-arm) | **send** to Hermes | back to list (discard) |
 
-## Status Indicators
+### Session screen
 
-| Display | Meaning |
-|---------|---------|
-| `connecting <url>` | Connecting to bridge |
-| `connected` | Ready for input |
-| `🎤 listening` | Mic is active, recording voice |
-| `⚙ <tool>...` | Tool call in progress |
-| `✓ <tool>` | Tool call completed |
-| `✓ done` | Turn completed (while watching) |
-| `✓ reply ready` | Turn completed while on sessions view |
+A terminal-style stream: `>` your entries, `/` tool calls (`/ name` running, `/ name ✓`
+done), and plain wrapped lines for the assistant. The header shows the session title +
+a connection dot (`●` connected / `◌` reconnecting). A bottom **agent-state bar** shows
+what's happening now:
+
+| Bar | Meaning |
+|-----|---------|
+| `ready for input` | session open, awaiting your tap |
+| `🎤 recording…` | mic on (tap to stop) |
+| `transcribing…` | Whisper running on the Mac |
+| `tap = send · swipe↓ = redo` | transcript shown, awaiting confirm |
+| `thinking…` | turn sent, before first token |
+| `working… (<tool>)` | a tool is active |
 
 ## Voice Input
 
-Double-tap to start recording. The mic captures PCM audio (16 kHz, s16le, mono) and streams it as binary WebSocket frames to the bridge. Double-tap again to stop. The bridge transcribes via `faster-whisper` and feeds the text to Hermes.
+Inside a session, **tap to start recording**; the mic captures PCM audio (16 kHz, s16le,
+mono) and streams it as binary WebSocket frames to the bridge. **Tap again to stop** — the
+bridge transcribes via `faster-whisper` and returns the transcript. You **review** it on
+the glasses, then **tap to send** it to Hermes (or **swipe down to redo**). Assistant
+replies stream back as incremental deltas and interleave with tool-call lines.
 
 ## Packaging
 
