@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { initialState, reduce, barText, connDot, type AppState } from "../src/state/store";
+import { initialState, reduce, barText, connDot, type AppState, type StreamItem } from "../src/state/store";
 
 describe("initialState", () => {
   it("boots on the session list, idle, empty stream", () => {
@@ -80,6 +80,14 @@ describe("reduce: stream", () => {
     let s = reduce(initialState(), { t: "tool.start", name: "x" });
     s = reduce(s, { t: "turn.done" });
     expect(s.turn).toBe("idle");
+  });
+  it("consecutive assistant deltas coalesce into one item", () => {
+    let s = { ...initialState(), stream: [{ kind: "user", text: "hi" } as StreamItem] };
+    s = reduce(s, { t: "assistant.delta", text: "First." });
+    s = reduce(s, { t: "assistant.delta", text: "Second." });
+    const assistant = s.stream.filter((i) => i.kind === "assistant");
+    expect(assistant).toHaveLength(1);
+    expect(assistant[0].kind === "assistant" && assistant[0].text).toBe("First.Second.");
   });
 });
 
