@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { dispatch } from "../src/input/dispatch";
 import { initialState, type AppState } from "../src/state/store";
-import { sessionsNew, sessionsSwitch, textMsg } from "../src/protocol";
+import { sessionsNew, sessionsSwitch, textMsg, sessionsList } from "../src/protocol";
 import { threadPages } from "../src/ui/stream";
 
 function listWith(items: { id: string; title: string }[]): AppState {
@@ -47,7 +47,7 @@ describe("dispatch: session idle", () => {
   it("double-press returns to the list", () => {
     const r = dispatch(session("idle"), "doubleClick");
     expect(r.state.screen).toBe("list");
-    expect(r.effects).toEqual([]);
+    expect(r.effects).toEqual([{ kind: "send", frame: sessionsList() }]);
   });
 });
 
@@ -88,7 +88,7 @@ describe("dispatch: session review", () => {
     const r = dispatch(review("oops"), "doubleClick");
     expect(r.state.screen).toBe("list");
     expect(r.state.pending).toBeNull();
-    expect(r.effects).toEqual([]);
+    expect(r.effects).toEqual([{ kind: "send", frame: sessionsList() }]);
   });
 });
 
