@@ -28,7 +28,7 @@ export function sessionForListIndex(items: SessionItem[], index: number): Sessio
 }
 
 export function displayTitle(title: string): string {
-  return title.trim() || "(untitled)";
+  return title.trim() || "New session";
 }
 
 export function truncateTitle(title: string, maxWidth = SESSION_HEADER_WIDTH_PX, maxChars = MAX_ITEM_CHARS): string {

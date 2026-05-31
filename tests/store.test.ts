@@ -10,6 +10,7 @@ describe("initialState", () => {
     expect(s.pending).toBeNull();
     expect(s.turn).toBe("idle");
     expect(s.sessions).toEqual({ items: [], active: null });
+    expect(s.history).toEqual({ loadingFor: null, failedFor: null });
   });
 });
 
@@ -25,6 +26,57 @@ describe("reduce: sessions", () => {
     expect(s.sessions.active).toBe("x");
     s = reduce(s, { t: "active", id: "y" });
     expect(s.sessions.active).toBe("y");
+    expect(s.history).toEqual({ loadingFor: "y", failedFor: null });
+  });
+  it("hydrates stream from history when a session is selected", () => {
+    const stale: StreamItem[] = [{ kind: "user", text: "stale" }];
+    const items: StreamItem[] = [
+      { kind: "user", text: "old question" },
+      { kind: "assistant", text: "old answer" },
+    ];
+    const s = {
+      ...initialState(),
+      stream: stale,
+      pending: { transcript: "draft" },
+      phase: "review" as const,
+      turn: "working" as const,
+      scrollPage: 2,
+      sessions: { items: [], active: "s1" },
+      history: { loadingFor: "s1", failedFor: null },
+    };
+
+    const next = reduce(s, { t: "history", id: "s1", items, ok: true });
+
+    expect(next.history).toEqual({ loadingFor: null, failedFor: null });
+    expect(next.stream).toEqual(items);
+    expect(next.pending).toBeNull();
+    expect(next.phase).toBe("idle");
+    expect(next.turn).toBe("idle");
+    expect(next.scrollPage).toBeNull();
+  });
+  it("ignores stale history for a session that is no longer active", () => {
+    const s: AppState = {
+      ...initialState(),
+      sessions: { items: [], active: "current" },
+      history: { loadingFor: "current", failedFor: null },
+      stream: [{ kind: "user", text: "keep me" }],
+    };
+
+    const next = reduce(s, { t: "history", id: "old", items: [{ kind: "user", text: "stale" }], ok: true });
+
+    expect(next).toBe(s);
+  });
+  it("marks history unavailable when loading failed", () => {
+    const s: AppState = {
+      ...initialState(),
+      sessions: { items: [], active: "s1" },
+      history: { loadingFor: "s1", failedFor: null },
+    };
+
+    const next = reduce(s, { t: "history", id: "s1", items: [], ok: false });
+
+    expect(next.history).toEqual({ loadingFor: null, failedFor: "s1" });
+    expect(barText(next)).toBe("history unavailable");
   });
 });
 
@@ -36,13 +88,14 @@ describe("reduce: stream", () => {
     expect(s.stream).toEqual([{ kind: "banner", text: "model: x\ncwd: y" }]);
   });
   it("assistant output AFTER a user item is assistant text", () => {
-    let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
+    let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }], scrollPage: 2 };
     s = reduce(s, { t: "assistant.delta", text: "It's" });
     s = reduce(s, { t: "assistant.delta", text: " Friday" });
     expect(s.stream).toEqual([
       { kind: "user", text: "hi" },
       { kind: "assistant", text: "It's Friday" },
     ]);
+    expect(s.scrollPage).toBeNull();
   });
   it("a full assistant frame after a user item appends assistant text", () => {
     let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
@@ -75,8 +128,9 @@ describe("reduce: stream", () => {
     ]);
   });
   it("pushes a running tool on tool.start and sets turn=working", () => {
-    let s = reduce(initialState(), { t: "tool.start", name: "terminal" });
+    let s = reduce({ ...initialState(), scrollPage: 2 }, { t: "tool.start", name: "terminal" });
     expect(s.turn).toBe("working");
+    expect(s.scrollPage).toBeNull();
     expect(s.stream).toEqual([{ kind: "tool", name: "terminal", running: true }]);
   });
   it("patches the matching running tool to done on tool.end", () => {
@@ -136,8 +190,16 @@ describe("barText", () => {
     expect(barText({ ...base, phase: "review" })).toBe("tap = send · swipe↓ = redo");
   });
   it("idle reflects the turn state", () => {
-    expect(barText({ ...base, phase: "idle", turn: "idle" })).toBe("ready for input");
+    expect(barText({ ...base, phase: "idle", turn: "idle" })).toBe("ready");
     expect(barText({ ...base, phase: "idle", turn: "thinking" })).toBe("thinking…");
+  });
+  it("shows history loading before idle status", () => {
+    expect(barText({
+      ...base,
+      phase: "idle",
+      sessions: { items: [], active: "s1" },
+      history: { loadingFor: "s1", failedFor: null },
+    })).toBe("loading session...");
   });
   it("working names the active tool", () => {
     const s = { ...base, phase: "idle" as const, turn: "working" as const,

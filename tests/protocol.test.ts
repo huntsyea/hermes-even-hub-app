@@ -9,6 +9,11 @@ describe("protocol", () => {
     const msg = parseServer(JSON.stringify({ t: "assistant", text: "hi" }));
     expect(msg).toEqual({ t: "assistant", text: "hi" });
   });
+  it("parses a history frame", () => {
+    const items = [{ kind: "user", text: "old question" }, { kind: "assistant", text: "old answer" }];
+    const msg = parseServer(JSON.stringify({ t: "history", id: "s1", items, ok: true }));
+    expect(msg).toEqual({ t: "history", id: "s1", items, ok: true });
+  });
   it("rejects unknown types", () => {
     expect(() => parseServer(JSON.stringify({ t: "nope" }))).toThrow();
   });

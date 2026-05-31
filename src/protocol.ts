@@ -5,10 +5,17 @@ export interface SessionItem {
   tokens?: number;
 }
 
+export type HistoryItem =
+  | { kind: "user"; text: string }
+  | { kind: "tool"; name: string; label?: string; running: boolean; ok?: boolean }
+  | { kind: "assistant"; text: string }
+  | { kind: "banner"; text: string };
+
 export type ServerMsg =
   | { t: "hello.ok"; caps: Record<string, unknown>; active: string | null }
   | { t: "sessions"; items: SessionItem[]; active: string | null }
   | { t: "active"; id: string }
+  | { t: "history"; id: string; items: HistoryItem[]; ok?: boolean }
   | { t: "transcript"; text: string }
   | { t: "assistant"; text: string }
   | { t: "assistant.delta"; text: string }
@@ -21,6 +28,7 @@ const SERVER_TYPES = new Set([
   "hello.ok",
   "sessions",
   "active",
+  "history",
   "transcript",
   "assistant",
   "assistant.delta",

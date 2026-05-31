@@ -37,9 +37,9 @@ describe("listRows", () => {
     expect(listRows(s, 1).slice(1)).toEqual(["  now first", "  now second"]);
   });
 
-  it("uses the untitled fallback", () => {
+  it("uses the new-session fallback for untitled sessions", () => {
     const s: AppState = { ...initialState(), sessions: { items: [{ id: "a", title: "   ", updated: 0 }], active: null } };
-    expect(listRows(s, 1)).toEqual(["＋ New session", "  -- (untitled)"]);
+    expect(listRows(s, 1)).toEqual(["＋ New session", "  -- New session"]);
   });
 
   it("truncates long rows to fit the native list width", () => {
@@ -69,7 +69,31 @@ describe("renderSession", () => {
     expect(calls[1]).toBe("build the app");      // IDS.header (title only)
     expect(calls[5]).toBe("●");                   // IDS.dot (far-right)
     expect(calls[2]).toBe("> hi");                // IDS.body
-    expect(calls[3]).toBe("ready for input");     // IDS.status
+    expect(calls[3]).toBe("ready");               // IDS.status
+  });
+  it("shows loading text while session history is in flight", async () => {
+    const calls: Record<number, string> = {};
+    const bridge = { textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }) } as any;
+    const s: AppState = {
+      ...initialState(), screen: "session", phase: "idle", conn: "connected",
+      sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" },
+      history: { loadingFor: "a", failedFor: null },
+    };
+    await renderSession(bridge, s);
+    expect(calls[2]).toBe("loading session...");
+    expect(calls[3]).toBe("loading session...");
+  });
+  it("keeps an empty failed-history session usable", async () => {
+    const calls: Record<number, string> = {};
+    const bridge = { textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }) } as any;
+    const s: AppState = {
+      ...initialState(), screen: "session", phase: "idle", conn: "connected",
+      sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" },
+      history: { loadingFor: null, failedFor: "a" },
+    };
+    await renderSession(bridge, s);
+    expect(calls[2]).toBe("tap to speak");
+    expect(calls[3]).toBe("history unavailable");
   });
   it("shows the pending transcript as the next user line during review", async () => {
     const calls: Record<number, string> = {};
@@ -118,6 +142,6 @@ describe("renderSession", () => {
     };
     const { threadPages } = await import("../src/ui/stream");
     await renderSession(bridge, s);
-    expect(calls[3]).toBe(`ready for input · 1/${threadPages(s.stream).length}`);
+    expect(calls[3]).toBe(`ready · 1/${threadPages(s.stream).length}`);
   });
 });

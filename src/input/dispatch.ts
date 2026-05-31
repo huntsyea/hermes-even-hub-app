@@ -16,6 +16,7 @@ export interface DispatchResult { state: AppState; effects: Effect[]; }
 const enterSession = (s: AppState, active: string | null): AppState => ({
   ...s, screen: "session", phase: "idle", stream: [], pending: null, turn: "idle",
   scrollPage: null,
+  history: { loadingFor: active, failedFor: null },
   sessions: { ...s.sessions, active },
 });
 

@@ -1,6 +1,6 @@
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import type { AppState, StreamItem } from "../state/store";
-import { barText, connDot } from "../state/store";
+import { barText, connDot, isHistoryLoading } from "../state/store";
 import { IDS, setText, showListPage } from "./render";
 import { sessionListRows, truncateTitle } from "./session-list";
 import { currentThreadViewport } from "./stream";
@@ -24,8 +24,9 @@ export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise
   await setText(bridge, IDS.header, title);
   await setText(bridge, IDS.dot, connDot(s.conn));
 
-  const body =
-    displayThreadItems(s).length === 0
+  const body = isHistoryLoading(s)
+    ? "loading session..."
+    : displayThreadItems(s).length === 0
       ? "tap to speak"
       : threadViewportText(s);
   await setText(bridge, IDS.body, body);
