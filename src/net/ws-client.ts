@@ -72,9 +72,11 @@ export class BridgeClient {
         }
       }, 15_000);
     };
-    (ws as any).onmessage = (e: { data: string }) => {
+    (ws as any).onmessage = (e: { data: unknown }) => {
       this.lastRecv = Date.now();
-      try { this.d.onMessage(parseServer(String(e.data))); } catch { /* ignore malformed */ }
+      void decodeWebSocketData(e.data)
+        .then((raw) => { this.d.onMessage(parseServer(raw)); })
+        .catch((err) => { console.warn("[bridge] ignored malformed frame", err); });
     };
     (ws as any).onclose = (event?: { code?: number; reason?: string }) => {
       this.clearTimers();
@@ -111,4 +113,16 @@ function isAuthClose(event?: { code?: number; reason?: string }): boolean {
     || reason.includes("bad hello")
     || reason.includes("token")
   );
+}
+
+export async function decodeWebSocketData(data: unknown): Promise<string> {
+  if (typeof data === "string") return data;
+  if (data instanceof ArrayBuffer) return new TextDecoder().decode(data);
+  if (ArrayBuffer.isView(data)) {
+    return new TextDecoder().decode(data);
+  }
+  if (typeof Blob !== "undefined" && data instanceof Blob) {
+    return data.text();
+  }
+  return String(data);
 }

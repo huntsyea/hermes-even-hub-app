@@ -7,7 +7,9 @@ export const LOADING_SESSIONS_ROW = "loading sessions...";
 const LIST_ROW_WIDTH_PX = 576;
 const SESSION_HEADER_WIDTH_PX = 540;
 const MAX_ITEM_CHARS = 64;
+const MAX_ITEM_BYTES = 63;
 const ELLIPSIS = "…";
+const utf8 = new TextEncoder();
 
 function activityTime(updated: number): number {
   return Number.isFinite(updated) ? updated : 0;
@@ -64,7 +66,7 @@ function formatSessionRow(item: SessionItem, active: string | null, nowSeconds: 
     LIST_ROW_WIDTH_PX - getTextWidth(prefix),
     MAX_ITEM_CHARS - prefix.length,
   );
-  return prefix + title;
+  return truncateBytes(prefix + title, MAX_ITEM_BYTES);
 }
 
 function compactAge(updated: number, nowSeconds: number): string {
@@ -80,4 +82,16 @@ function compactAge(updated: number, nowSeconds: number): string {
 
 function fits(text: string, maxWidth: number, maxChars: number): boolean {
   return text.length <= maxChars && getTextWidth(text) <= maxWidth;
+}
+
+function truncateBytes(text: string, maxBytes: number): string {
+  if (utf8.encode(text).length <= maxBytes) return text;
+
+  const chars = Array.from(text);
+  while (chars.length > 0) {
+    const candidate = chars.join("").trimEnd() + ELLIPSIS;
+    if (utf8.encode(candidate).length <= maxBytes) return candidate;
+    chars.pop();
+  }
+  return "";
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { BridgeClient } from "../src/net/ws-client";
+import { BridgeClient, decodeWebSocketData } from "../src/net/ws-client";
 import type { ConnectionProfile } from "../src/storage/persist";
 
 const profile: ConnectionProfile = {
@@ -12,7 +12,7 @@ class FakeWS {
   static last: FakeWS | undefined;
   static opened: FakeWS[] = [];
   onopen?: () => void;
-  onmessage?: (e: { data: string }) => void;
+  onmessage?: (e: { data: unknown }) => void;
   onclose?: (event?: { code?: number; reason?: string }) => void;
   onerror?: () => void;
   sent: unknown[] = [];
@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe("BridgeClient", () => {
-  it("sends hello for the supplied runtime profile and surfaces parsed messages", () => {
+  it("sends hello for the supplied runtime profile and surfaces parsed messages", async () => {
     const msgs: unknown[] = [];
     const c = new BridgeClient({ WS: FakeWS as any, onMessage: (m) => msgs.push(m) });
 
@@ -43,6 +43,7 @@ describe("BridgeClient", () => {
     expect(FakeWS.last!.url).toBe("wss://node.tailnet.ts.net:8443");
     expect(JSON.parse(String(FakeWS.last!.sent[0]))).toEqual({ t: "hello", token: "tok", device: "g2" });
     FakeWS.last!.onmessage!({ data: JSON.stringify({ t: "active", id: "s1" }) });
+    await Promise.resolve();
     expect(msgs).toEqual([{ t: "active", id: "s1" }]);
   });
 
@@ -125,6 +126,16 @@ describe("BridgeClient", () => {
     expect(statuses).toContain("websocket error");
     expect(statuses).toContain("websocket error; reconnecting");
     vi.useRealTimers();
+  });
+});
+
+describe("decodeWebSocketData", () => {
+  it("decodes string, ArrayBuffer, typed array, and Blob payloads", async () => {
+    const text = '{"t":"hello.ok"}';
+    expect(await decodeWebSocketData(text)).toBe(text);
+    expect(await decodeWebSocketData(new TextEncoder().encode(text).buffer)).toBe(text);
+    expect(await decodeWebSocketData(new TextEncoder().encode(text))).toBe(text);
+    expect(await decodeWebSocketData(new Blob([text]))).toBe(text);
   });
 });
 
