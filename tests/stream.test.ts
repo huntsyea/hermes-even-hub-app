@@ -1,6 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { getTextWidth } from "@evenrealities/pretext";
-import { streamToText, paginate, threadPages } from "../src/ui/stream";
+import {
+  THREAD_BODY_INNER_WIDTH,
+  THREAD_VIEWPORT_LINES,
+  currentThreadViewport,
+  nextThreadViewportCursor,
+  previousThreadViewportIndex,
+  streamToText,
+  threadPages,
+  threadViewports,
+  wrapTextLines,
+} from "../src/ui/stream";
 import type { StreamItem } from "../src/state/store";
 
 const RULE = "─".repeat(26);
@@ -43,27 +53,41 @@ describe("streamToText", () => {
   });
 });
 
-describe("paginate", () => {
-  it("returns one empty page for empty text", () => {
-    expect(paginate("")).toEqual([""]);
+describe("measured wrapping", () => {
+  it("wraps long text to the measured body width", () => {
+    const lines = wrapTextLines("x".repeat(140));
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) expect(getTextWidth(line)).toBeLessThanOrEqual(THREAD_BODY_INNER_WIDTH);
   });
-  it("splits on line boundaries within the char budget", () => {
-    const text = "0123456789\n0123456789\n0123456789";
-    const pages = paginate(text, 25);
-    expect(pages).toEqual(["0123456789\n0123456789", "0123456789"]);
-  });
-  it("hard-splits a single line longer than the budget", () => {
-    expect(paginate("abcdef", 3)).toEqual(["abc", "def"]);
-  });
-  it("drops blank-line separators that straddle a page boundary", () => {
-    expect(paginate("a".repeat(360) + "\n\n" + "x", 360)).toEqual(["a".repeat(360), "x"]);
+
+  it("preserves explicit line breaks", () => {
+    expect(wrapTextLines("a\nb\nc")).toEqual(["a", "b", "c"]);
   });
 });
 
 describe("threadPages", () => {
-  it("renders then paginates the stream", () => {
+  it("renders then returns measured viewports", () => {
     const items: StreamItem[] = [{ kind: "user", text: "hi" }];
     expect(threadPages(items)).toEqual(["> hi"]);
+  });
+
+  it("creates overlapping viewport windows by measured line capacity", () => {
+    const lines = Array.from({ length: THREAD_VIEWPORT_LINES + 1 }, (_, i) => `line ${i + 1}`);
+    const items: StreamItem[] = [{ kind: "assistant", text: lines.join("\n") }];
+    const viewports = threadViewports(items);
+
+    expect(viewports).toHaveLength(2);
+    expect(viewports[0].content).toBe(lines.slice(0, THREAD_VIEWPORT_LINES).join("\n"));
+    expect(viewports[1].content).toBe(lines.slice(1).join("\n"));
+  });
+
+  it("uses null as follow-latest mode", () => {
+    const lines = Array.from({ length: THREAD_VIEWPORT_LINES + 1 }, (_, i) => `line ${i + 1}`);
+    const items: StreamItem[] = [{ kind: "assistant", text: lines.join("\n") }];
+
+    expect(currentThreadViewport(items, null).index).toBe(1);
+    expect(previousThreadViewportIndex(items, null)).toBe(0);
+    expect(nextThreadViewportCursor(items, 0)).toBeNull();
   });
 });
 

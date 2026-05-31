@@ -4,8 +4,8 @@ import { initialState, type AppState } from "../src/state/store";
 import { sessionsNew, sessionsSwitch, textMsg, sessionsList } from "../src/protocol";
 import { threadPages } from "../src/ui/stream";
 
-function listWith(items: { id: string; title: string }[]): AppState {
-  return { ...initialState(), sessions: { items: items.map((i) => ({ ...i, updated: 0 })), active: null } };
+function listWith(items: { id: string; title: string; updated?: number }[]): AppState {
+  return { ...initialState(), sessions: { items: items.map((i) => ({ ...i, updated: i.updated ?? 0 })), active: null } };
 }
 
 describe("dispatch: list", () => {
@@ -21,6 +21,25 @@ describe("dispatch: list", () => {
     expect(r.state.screen).toBe("session");
     expect(r.state.sessions.active).toBe("a");
     expect(r.effects).toEqual([{ kind: "send", frame: sessionsSwitch("a") }]);
+  });
+  it("index 1 opens the newest session when the server sends oldest-first", () => {
+    const r = dispatch(listWith([
+      { id: "old", title: "Old", updated: 1 },
+      { id: "new", title: "New", updated: 3 },
+      { id: "middle", title: "Middle", updated: 2 },
+    ]), "click", 1);
+    expect(r.state.screen).toBe("session");
+    expect(r.state.sessions.active).toBe("new");
+    expect(r.effects).toEqual([{ kind: "send", frame: sessionsSwitch("new") }]);
+  });
+  it("list indexes follow newest-first order after the new row", () => {
+    const r = dispatch(listWith([
+      { id: "old", title: "Old", updated: 1 },
+      { id: "new", title: "New", updated: 3 },
+      { id: "middle", title: "Middle", updated: 2 },
+    ]), "click", 2);
+    expect(r.state.sessions.active).toBe("middle");
+    expect(r.effects).toEqual([{ kind: "send", frame: sessionsSwitch("middle") }]);
   });
   it("double-press exits the app", () => {
     const r = dispatch(listWith([]), "doubleClick");
@@ -109,7 +128,7 @@ describe("dispatch: session transcribing", () => {
 });
 
 function longSession(): AppState {
-  const big = "x".repeat(800); // ~3 pages at the 360-char budget
+  const big = "x".repeat(800); // multiple measured viewport windows
   return {
     ...initialState(),
     screen: "session",
@@ -119,17 +138,17 @@ function longSession(): AppState {
 }
 
 describe("dispatch: session idle scrolling", () => {
-  it("scrollUp from follow moves to the second-to-last page", () => {
+  it("scrollUp from follow moves to the previous measured viewport", () => {
     const pages = threadPages(longSession().stream);
     const r = dispatch(longSession(), "scrollUp");
     expect(r.state.scrollPage).toBe(pages.length - 2);
     expect(r.effects).toEqual([]);
   });
-  it("scrollUp clamps at the first page", () => {
+  it("scrollUp clamps at the first viewport", () => {
     const r = dispatch({ ...longSession(), scrollPage: 0 }, "scrollUp");
     expect(r.state.scrollPage).toBe(0);
   });
-  it("scrollDown to the last page resumes follow (null)", () => {
+  it("scrollDown to the latest viewport resumes follow (null)", () => {
     const pages = threadPages(longSession().stream);
     const r = dispatch({ ...longSession(), scrollPage: pages.length - 2 }, "scrollDown");
     expect(r.state.scrollPage).toBeNull();

@@ -1,7 +1,7 @@
 {
   "name": "hermes-even-hub-app",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.3",
   "type": "module",
   "description": "Even Realities G2 glasses app (Even Hub WebView) — the client half of the G2 × Hermes bridge",
   "license": "MIT",
@@ -21,12 +21,12 @@
   "devDependencies": {
     "@evenrealities/evenhub-cli": "^0.1.13",
     "@evenrealities/evenhub-simulator": "^0.7.3",
-    "@evenrealities/pretext": "^0.1.4",
     "typescript": "^5.9.3",
     "vite": "^8.0.12",
     "vitest": "^4.1.7"
   },
   "dependencies": {
-    "@evenrealities/even_hub_sdk": "^0.0.10"
+    "@evenrealities/even_hub_sdk": "^0.0.10",
+    "@evenrealities/pretext": "^0.1.4"
   }
 }

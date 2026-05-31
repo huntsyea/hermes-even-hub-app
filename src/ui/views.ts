@@ -2,17 +2,15 @@ import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import type { AppState } from "../state/store";
 import { barText, connDot } from "../state/store";
 import { IDS, setText, showListPage } from "./render";
-import { threadPages } from "./stream";
-
-const ROW_CHARS = 48;
+import { sessionListRows, truncateTitle } from "./session-list";
+import { currentThreadViewport } from "./stream";
 
 export function truncateRow(title: string): string {
-  const t = title.trim() || "(untitled)";
-  return t.length <= ROW_CHARS ? t : t.slice(0, ROW_CHARS - 1) + "…";
+  return truncateTitle(title);
 }
 
-export function listRows(s: AppState): string[] {
-  return ["＋ New session", ...s.sessions.items.map((i) => truncateRow(i.title))];
+export function listRows(s: AppState, nowSeconds?: number): string[] {
+  return sessionListRows(s.sessions.items, s.sessions.active, nowSeconds);
 }
 
 export async function renderList(bridge: EvenAppBridge, s: AppState): Promise<void> {
@@ -31,14 +29,20 @@ export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise
       ? `"${s.pending.transcript}"`
       : s.stream.length === 0
         ? "tap to speak"
-        : threadPage(s);
+        : threadViewportText(s);
   await setText(bridge, IDS.body, body);
 
-  await setText(bridge, IDS.status, barText(s));
+  await setText(bridge, IDS.status, statusText(s));
 }
 
-function threadPage(s: AppState): string {
-  const pages = threadPages(s.stream);
-  const idx = s.scrollPage === null ? pages.length - 1 : Math.min(s.scrollPage, pages.length - 1);
-  return pages[idx] ?? "";
+function threadViewportText(s: AppState): string {
+  return currentThreadViewport(s.stream, s.scrollPage).content;
+}
+
+function statusText(s: AppState): string {
+  const base = barText(s);
+  if (s.phase !== "idle" || s.stream.length === 0) return base;
+
+  const viewport = currentThreadViewport(s.stream, s.scrollPage);
+  return viewport.total > 1 ? `${base} · ${viewport.index + 1}/${viewport.total}` : base;
 }
