@@ -3,8 +3,8 @@ import "./style.css";
 import { loadBridgeDefaults } from "./config";
 import { BridgeClient } from "./net/ws-client";
 import { initialState, reduce, type AppState } from "./state/store";
-import { createListStartup, createSetupStartup, showListPage, showSessionPage } from "./ui/render";
-import { renderSession, listRows } from "./ui/views";
+import { createLoadingStartup, createSetupStartup, showListPage, showLoadingPage, showSessionPage } from "./ui/render";
+import { loadingText, renderSession, listRows } from "./ui/views";
 import { renderPhoneSetup } from "./ui/phone";
 import { routeEvent, type ListSelection } from "./input/router";
 import { dispatch, type Gesture, type Effect } from "./input/dispatch";
@@ -32,9 +32,11 @@ async function boot(): Promise<void> {
   let phoneErrors: string[] = [];
   let glassesView: "setup" | "list" = profileIsReady(profile) ? "list" : "setup";
   let visibleListRows = listRows(state);
+  let helloOk = false;
+  let sessionsRetryTimer: ReturnType<typeof setInterval> | undefined;
 
   if (glassesView === "list") {
-    await createListStartup(bridge, visibleListRows);
+    await createLoadingStartup(bridge);
   } else {
     state = { ...state, conn: "not configured" };
     await createSetupStartup(bridge);
@@ -43,6 +45,7 @@ async function boot(): Promise<void> {
   const scheduleRender = serializeLatest((s: AppState) => {
     if (glassesView === "setup") return Promise.resolve();
     if (s.screen === "list") {
+      if (!s.sessionsLoaded) return showLoadingPage(bridge, loadingText(s));
       visibleListRows = listRows(s);
       return showListPage(bridge, visibleListRows);
     }
@@ -79,14 +82,29 @@ async function boot(): Promise<void> {
     }));
   };
 
+  const startSessionsRetry = (): void => {
+    if (sessionsRetryTimer) return;
+    sessionsRetryTimer = setInterval(() => {
+      if (helloOk && !state.sessionsLoaded) client.send(sessionsList());
+    }, 2000);
+  };
+
+  const stopSessionsRetry = (): void => {
+    clearInterval(sessionsRetryTimer);
+    sessionsRetryTimer = undefined;
+  };
+
   const client = new BridgeClient({
     onMessage: (m) => {
       state = reduce(state, m);
       scheduleRender(state);
       if (m.t === "hello.ok") {
+        helloOk = true;
         client.send(sessionsList());
+        startSessionsRetry();
         persistActiveSession(m.active);
       }
+      if (m.t === "sessions") stopSessionsRetry();
       if (m.t === "active") persistActiveSession(m.id);
     },
     onStatus: setStatus,
@@ -110,15 +128,18 @@ async function boot(): Promise<void> {
     profile = await saveConnectionProfile(bridge, candidate);
     if (glassesView === "setup") {
       glassesView = "list";
-      visibleListRows = listRows(state);
-      await showListPage(bridge, visibleListRows);
+      await showLoadingPage(bridge, loadingText(state));
     }
+    helloOk = false;
     client.connect(profile);
     renderPhone();
   }
 
   renderPhone();
-  if (profileIsReady(profile)) client.connect(profile);
+  if (profileIsReady(profile)) {
+    helloOk = false;
+    client.connect(profile);
+  }
 
   const capture = createCapture(bridge, client);
 
@@ -164,6 +185,7 @@ async function boot(): Promise<void> {
     torn = true;
     off();
     void capture.stop();
+    stopSessionsRetry();
     client.disconnect();
   }
 

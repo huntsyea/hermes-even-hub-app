@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { getTextWidth } from "@evenrealities/pretext";
-import { listRows, renderSession } from "../src/ui/views";
+import { listRows, loadingText, renderList, renderSession } from "../src/ui/views";
 import { initialState, type AppState } from "../src/state/store";
 
 describe("listRows", () => {
@@ -58,6 +58,32 @@ describe("listRows", () => {
     expect(row.endsWith("…")).toBe(true);
     expect(row.length).toBeLessThanOrEqual(64);
     expect(getTextWidth(row)).toBeLessThanOrEqual(576);
+  });
+});
+
+describe("renderList", () => {
+  it("renders loading as a text page until sessions hydrate", async () => {
+    const bridge = { rebuildPageContainer: vi.fn(async () => {}) } as any;
+    await renderList(bridge, { ...initialState(), conn: "connected" });
+    const arg = bridge.rebuildPageContainer.mock.calls[0][0];
+    expect(arg.listObject).toBeUndefined();
+    expect(arg.textObject[0].content).toBe("loading sessions...\nwaiting for session list");
+  });
+
+  it("renders a native list after sessions hydrate", async () => {
+    const bridge = { rebuildPageContainer: vi.fn(async () => {}) } as any;
+    await renderList(bridge, {
+      ...initialState(),
+      sessionsLoaded: true,
+      sessions: { items: [{ id: "a", title: "A", updated: 1 }], active: null },
+    });
+    const arg = bridge.rebuildPageContainer.mock.calls[0][0];
+    expect(arg.textObject).toBeUndefined();
+    expect(arg.listObject[0].itemContainer.itemName[0]).toBe("＋ New session");
+  });
+
+  it("includes connection status in loading text", () => {
+    expect(loadingText({ ...initialState(), conn: "reconnecting" })).toBe("loading sessions...\nreconnecting");
   });
 });
 

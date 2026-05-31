@@ -1,7 +1,7 @@
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import type { AppState, StreamItem } from "../state/store";
 import { barText, connDot, isHistoryLoading } from "../state/store";
-import { IDS, setText, showListPage } from "./render";
+import { IDS, setText, showListPage, showLoadingPage } from "./render";
 import { LOADING_SESSIONS_ROW, sessionListRows, truncateTitle } from "./session-list";
 import { currentThreadViewport } from "./stream";
 
@@ -15,8 +15,19 @@ export function listRows(s: AppState, nowSeconds?: number): string[] {
 }
 
 export async function renderList(bridge: EvenAppBridge, s: AppState): Promise<void> {
+  if (!s.sessionsLoaded) {
+    await showLoadingPage(bridge, loadingText(s));
+    return;
+  }
   // Lists can't update in place — rebuild the page (glasses-ui).
   await showListPage(bridge, listRows(s));
+}
+
+export function loadingText(s: AppState): string {
+  const status = s.conn === "connected"
+    ? "waiting for session list"
+    : s.conn;
+  return `loading sessions...\n${status}`;
 }
 
 export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise<void> {

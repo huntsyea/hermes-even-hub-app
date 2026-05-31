@@ -23,6 +23,22 @@ function chatTextObjects(): TextContainerProperty[] {
   ];
 }
 
+function loadingTextObject(content = "loading sessions...\nconnecting bridge"): TextContainerProperty[] {
+  return [
+    new TextContainerProperty({
+      containerID: IDS.body,
+      containerName: "body",
+      xPosition: 0,
+      yPosition: 0,
+      width: 576,
+      height: 288,
+      paddingLength: 12,
+      isEventCapture: 1,
+      content,
+    }),
+  ];
+}
+
 // Session page: the four text containers (header / dot / body / status), reused for
 // every session render. createStartUpPageContainer is one-shot, so re-entering a
 // session uses rebuildPageContainer; renderSession() then fills content in-place.
@@ -58,6 +74,13 @@ export async function createListStartup(bridge: EvenAppBridge, rows: string[]): 
   }));
 }
 
+export async function createLoadingStartup(bridge: EvenAppBridge): Promise<void> {
+  await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({
+    containerTotalNum: 1,
+    textObject: loadingTextObject(),
+  }));
+}
+
 export async function createSetupStartup(bridge: EvenAppBridge): Promise<void> {
   await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({
     containerTotalNum: 1,
@@ -74,6 +97,13 @@ export async function createSetupStartup(bridge: EvenAppBridge): Promise<void> {
         content: "Open phone app\nto configure bridge.",
       }),
     ],
+  }));
+}
+
+export async function showLoadingPage(bridge: EvenAppBridge, content: string): Promise<void> {
+  await bridge.rebuildPageContainer(new RebuildPageContainer({
+    containerTotalNum: 1,
+    textObject: loadingTextObject(content),
   }));
 }
 

@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { setText, IDS, createListStartup, createSetupStartup, showListPage, showSessionPage } from "../src/ui/render";
+import {
+  setText, IDS, createListStartup, createLoadingStartup, createSetupStartup,
+  showListPage, showLoadingPage, showSessionPage,
+} from "../src/ui/render";
 
 function fakeBridge() {
   return {
@@ -41,6 +44,24 @@ describe("list pages", () => {
 });
 
 describe("setup page", () => {
+  it("createLoadingStartup builds a one-shot non-list loading page", async () => {
+    const b = fakeBridge();
+    await createLoadingStartup(b);
+    const arg = b.createStartUpPageContainer.mock.calls[0][0];
+    expect(arg.containerTotalNum).toBe(1);
+    expect(arg.listObject).toBeUndefined();
+    expect(arg.textObject[0].content).toContain("loading sessions");
+  });
+
+  it("showLoadingPage rebuilds a non-list loading page", async () => {
+    const b = fakeBridge();
+    await showLoadingPage(b, "loading sessions...\nwaiting");
+    const arg = b.rebuildPageContainer.mock.calls[0][0];
+    expect(arg.containerTotalNum).toBe(1);
+    expect(arg.listObject).toBeUndefined();
+    expect(arg.textObject[0].content).toBe("loading sessions...\nwaiting");
+  });
+
   it("createSetupStartup builds a one-shot phone handoff message", async () => {
     const b = fakeBridge();
     await createSetupStartup(b);
