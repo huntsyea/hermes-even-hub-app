@@ -18,7 +18,7 @@ export interface AppState {
   stream: StreamItem[];
   pending: { transcript: string } | null;
   turn: Turn;
-  scrollPage: number | null; // null = follow latest page; number = absolute page index (held)
+  scrollPage: number | null; // null = follow latest viewport; number = measured viewport index (held)
 }
 
 export function initialState(): AppState {

@@ -1,6 +1,7 @@
 import type { AppState } from "../state/store";
 import { sessionsNew, sessionsSwitch, textMsg, sessionsList } from "../protocol";
-import { threadPages } from "../ui/stream";
+import { sessionForListIndex } from "../ui/session-list";
+import { nextThreadViewportCursor, previousThreadViewportIndex } from "../ui/stream";
 
 export type Gesture = "click" | "doubleClick" | "scrollUp" | "scrollDown";
 
@@ -23,7 +24,7 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
     if (g === "click") {
       const i = index ?? 0; // proto3 omits index 0 → undefined means the ＋New row
       if (i === 0) return { state: enterSession(s, null), effects: [{ kind: "send", frame: sessionsNew() }] };
-      const item = s.sessions.items[i - 1];
+      const item = sessionForListIndex(s.sessions.items, i);
       if (!item) return { state: s, effects: [] };
       return { state: enterSession(s, item.id), effects: [{ kind: "send", frame: sessionsSwitch(item.id) }] };
     }
@@ -35,16 +36,12 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
     if (g === "click") return { state: { ...s, phase: "recording" }, effects: [{ kind: "startMic" }] };
     if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [{ kind: "send", frame: sessionsList() }] };
     if (g === "scrollUp") {
-      const pages = threadPages(s.stream);
-      const cur = s.scrollPage === null ? pages.length - 1 : s.scrollPage;
-      if (cur === 0) return { state: s, effects: [] }; // at first page → stay in follow mode
-      return { state: { ...s, scrollPage: cur - 1 }, effects: [] };
+      const prev = previousThreadViewportIndex(s.stream, s.scrollPage);
+      return prev === s.scrollPage ? { state: s, effects: [] } : { state: { ...s, scrollPage: prev }, effects: [] };
     }
     if (g === "scrollDown") {
-      if (s.scrollPage === null) return { state: s, effects: [] };
-      const pages = threadPages(s.stream);
-      const next = s.scrollPage + 1;
-      return { state: { ...s, scrollPage: next >= pages.length - 1 ? null : next }, effects: [] };
+      const next = nextThreadViewportCursor(s.stream, s.scrollPage);
+      return next === s.scrollPage ? { state: s, effects: [] } : { state: { ...s, scrollPage: next }, effects: [] };
     }
     return { state: s, effects: [] };
   }

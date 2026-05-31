@@ -37,7 +37,7 @@ describe("renderSession", () => {
   it("renders the held page when scrollPage is an absolute index", async () => {
     const calls: Record<number, string> = {};
     const bridge = { textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }) } as any;
-    const big = "x".repeat(800); // multiple pages at the 360-char budget
+    const big = "x".repeat(800); // multiple measured viewport windows
     const s: AppState = {
       ...initialState(), screen: "session", phase: "idle", conn: "connected",
       sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" },
@@ -47,5 +47,19 @@ describe("renderSession", () => {
     const { threadPages } = await import("../src/ui/stream");
     await renderSession(bridge, s);
     expect(calls[2]).toBe(threadPages(s.stream)[0]); // IDS.body shows page 0
+  });
+  it("adds viewport position to the status line for long threads", async () => {
+    const calls: Record<number, string> = {};
+    const bridge = { textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }) } as any;
+    const big = "x".repeat(800);
+    const s: AppState = {
+      ...initialState(), screen: "session", phase: "idle", conn: "connected",
+      sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" },
+      stream: [{ kind: "user", text: "hi" }, { kind: "assistant", text: big }],
+      scrollPage: 0,
+    };
+    const { threadPages } = await import("../src/ui/stream");
+    await renderSession(bridge, s);
+    expect(calls[3]).toBe(`ready for input · 1/${threadPages(s.stream).length}`);
   });
 });
