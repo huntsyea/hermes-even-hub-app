@@ -10,6 +10,7 @@ describe("initialState", () => {
     expect(s.pending).toBeNull();
     expect(s.turn).toBe("idle");
     expect(s.sessions).toEqual({ items: [], active: null });
+    expect(s.sessionsLoaded).toBe(false);
     expect(s.history).toEqual({ loadingFor: null, failedFor: null });
   });
 });
@@ -18,8 +19,26 @@ describe("reduce: sessions", () => {
   it("sets items and active from a sessions message", () => {
     const s: AppState = initialState();
     const next = reduce(s, { t: "sessions", items: [{ id: "a", title: "A", updated: 1 }], active: "a" });
+    expect(next.sessionsLoaded).toBe(true);
     expect(next.sessions.items).toHaveLength(1);
     expect(next.sessions.active).toBe("a");
+  });
+  it("does not let a late sessions frame steal active while history is loading", () => {
+    const s: AppState = {
+      ...initialState(),
+      screen: "session",
+      sessions: { items: [{ id: "old", title: "Old", updated: 1 }], active: "selected" },
+      history: { loadingFor: "selected", failedFor: null },
+    };
+
+    const next = reduce(s, {
+      t: "sessions",
+      items: [{ id: "selected", title: "Selected", updated: 2 }],
+      active: "old",
+    });
+
+    expect(next.sessions.items).toHaveLength(1);
+    expect(next.sessions.active).toBe("selected");
   });
   it("sets active from hello.ok and active messages", () => {
     let s = reduce(initialState(), { t: "hello.ok", caps: {}, active: "x" });
@@ -65,6 +84,24 @@ describe("reduce: sessions", () => {
     const next = reduce(s, { t: "history", id: "old", items: [{ kind: "user", text: "stale" }], ok: true });
 
     expect(next).toBe(s);
+  });
+  it("hydrates pending history even after active was overwritten", () => {
+    const s: AppState = {
+      ...initialState(),
+      sessions: { items: [], active: "old" },
+      history: { loadingFor: "selected", failedFor: null },
+    };
+
+    const next = reduce(s, {
+      t: "history",
+      id: "selected",
+      items: [{ kind: "user", text: "loaded" }],
+      ok: true,
+    });
+
+    expect(next.sessions.active).toBe("selected");
+    expect(next.stream).toEqual([{ kind: "user", text: "loaded" }]);
+    expect(next.history).toEqual({ loadingFor: null, failedFor: null });
   });
   it("marks history unavailable when loading failed", () => {
     const s: AppState = {

@@ -5,10 +5,20 @@ import { sessionsNew, sessionsSwitch, textMsg, sessionsList } from "../src/proto
 import { threadPages } from "../src/ui/stream";
 
 function listWith(items: { id: string; title: string; updated?: number }[]): AppState {
-  return { ...initialState(), sessions: { items: items.map((i) => ({ ...i, updated: i.updated ?? 0 })), active: null } };
+  return {
+    ...initialState(),
+    sessionsLoaded: true,
+    sessions: { items: items.map((i) => ({ ...i, updated: i.updated ?? 0 })), active: null },
+  };
 }
 
 describe("dispatch: list", () => {
+  it("ignores taps until sessions hydrate", () => {
+    const r = dispatch(initialState(), "click", 0);
+    expect(r.state.screen).toBe("list");
+    expect(r.effects).toEqual([]);
+  });
+
   it("index 0 (or undefined) creates + opens a new session", () => {
     const r = dispatch(listWith([{ id: "a", title: "A" }]), "click", undefined);
     expect(r.state.screen).toBe("session");
@@ -50,6 +60,11 @@ describe("dispatch: list", () => {
     const r = dispatch(listWith([{ id: "a", title: "A" }]), "scrollUp");
     expect(r.effects).toEqual([]);
     expect(r.state.screen).toBe("list");
+  });
+  it("unresolved list selection does not create a new session", () => {
+    const r = dispatch(listWith([{ id: "a", title: "A" }]), "click", -1);
+    expect(r.state.screen).toBe("list");
+    expect(r.effects).toEqual([]);
   });
 });
 

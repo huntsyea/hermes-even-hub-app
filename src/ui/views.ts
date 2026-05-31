@@ -2,7 +2,7 @@ import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import type { AppState, StreamItem } from "../state/store";
 import { barText, connDot, isHistoryLoading } from "../state/store";
 import { IDS, setText, showListPage } from "./render";
-import { sessionListRows, truncateTitle } from "./session-list";
+import { LOADING_SESSIONS_ROW, sessionListRows, truncateTitle } from "./session-list";
 import { currentThreadViewport } from "./stream";
 
 export function truncateRow(title: string): string {
@@ -10,6 +10,7 @@ export function truncateRow(title: string): string {
 }
 
 export function listRows(s: AppState, nowSeconds?: number): string[] {
+  if (!s.sessionsLoaded) return [LOADING_SESSIONS_ROW];
   return sessionListRows(s.sessions.items, s.sessions.active, nowSeconds);
 }
 

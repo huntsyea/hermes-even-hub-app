@@ -4,9 +4,9 @@ import { loadBridgeDefaults } from "./config";
 import { BridgeClient } from "./net/ws-client";
 import { initialState, reduce, type AppState } from "./state/store";
 import { createListStartup, createSetupStartup, showListPage, showSessionPage } from "./ui/render";
-import { renderList, renderSession, listRows } from "./ui/views";
+import { renderSession, listRows } from "./ui/views";
 import { renderPhoneSetup } from "./ui/phone";
-import { routeEvent } from "./input/router";
+import { routeEvent, type ListSelection } from "./input/router";
 import { dispatch, type Gesture, type Effect } from "./input/dispatch";
 import { sessionsList } from "./protocol";
 import { serializeLatest } from "./util/coalesce";
@@ -31,9 +31,10 @@ async function boot(): Promise<void> {
   let state: AppState = initialState();
   let phoneErrors: string[] = [];
   let glassesView: "setup" | "list" = profileIsReady(profile) ? "list" : "setup";
+  let visibleListRows = listRows(state);
 
   if (glassesView === "list") {
-    await createListStartup(bridge, listRows(state));
+    await createListStartup(bridge, visibleListRows);
   } else {
     state = { ...state, conn: "not configured" };
     await createSetupStartup(bridge);
@@ -41,7 +42,11 @@ async function boot(): Promise<void> {
 
   const scheduleRender = serializeLatest((s: AppState) => {
     if (glassesView === "setup") return Promise.resolve();
-    return s.screen === "list" ? renderList(bridge, s) : renderSession(bridge, s);
+    if (s.screen === "list") {
+      visibleListRows = listRows(s);
+      return showListPage(bridge, visibleListRows);
+    }
+    return renderSession(bridge, s);
   });
 
   const renderPhone = (): void => {
@@ -105,7 +110,8 @@ async function boot(): Promise<void> {
     profile = await saveConnectionProfile(bridge, candidate);
     if (glassesView === "setup") {
       glassesView = "list";
-      await showListPage(bridge, listRows(state));
+      visibleListRows = listRows(state);
+      await showListPage(bridge, visibleListRows);
     }
     client.connect(profile);
     renderPhone();
@@ -123,6 +129,15 @@ async function boot(): Promise<void> {
     else if (e.kind === "exit") bridge.shutDownPageContainer(1);
   }
 
+  function selectedListIndex(selection?: ListSelection): number | undefined {
+    if (selection?.index !== undefined) return selection.index;
+    if (selection?.name !== undefined) {
+      const index = visibleListRows.indexOf(selection.name);
+      return index >= 0 ? index : -1;
+    }
+    return undefined;
+  }
+
   async function applyGesture(g: Gesture, index?: number): Promise<void> {
     if (glassesView === "setup") {
       if (g === "doubleClick") bridge.shutDownPageContainer(1);
@@ -134,7 +149,10 @@ async function boot(): Promise<void> {
     state = r.state;
     for (const e of r.effects) runEffect(e);
     if (state.screen !== prevScreen) {
-      if (state.screen === "list") await showListPage(bridge, listRows(state));
+      if (state.screen === "list") {
+        visibleListRows = listRows(state);
+        await showListPage(bridge, visibleListRows);
+      }
       else await showSessionPage(bridge);
     }
     scheduleRender(state);
@@ -161,7 +179,7 @@ async function boot(): Promise<void> {
       return;
     }
     routeEvent(e, {
-      onClick: (index) => { fireAndForget(applyGesture("click", index)); },
+      onClick: (selection) => { fireAndForget(applyGesture("click", selectedListIndex(selection))); },
       onDoubleClick: () => { fireAndForget(applyGesture("doubleClick")); },
       onScrollUp: () => { fireAndForget(applyGesture("scrollUp")); },
       onScrollDown: () => { fireAndForget(applyGesture("scrollDown")); },

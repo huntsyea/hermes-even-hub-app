@@ -2,6 +2,7 @@ import { getTextWidth } from "@evenrealities/pretext";
 import type { SessionItem } from "../protocol";
 
 export const NEW_SESSION_ROW = "＋ New session";
+export const LOADING_SESSIONS_ROW = "loading sessions...";
 
 const LIST_ROW_WIDTH_PX = 576;
 const SESSION_HEADER_WIDTH_PX = 540;

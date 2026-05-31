@@ -22,6 +22,7 @@ const enterSession = (s: AppState, active: string | null): AppState => ({
 
 export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResult {
   if (s.screen === "list") {
+    if (!s.sessionsLoaded) return { state: s, effects: [] };
     if (g === "click") {
       const i = index ?? 0; // proto3 omits index 0 → undefined means the ＋New row
       if (i === 0) return { state: enterSession(s, null), effects: [{ kind: "send", frame: sessionsNew() }] };

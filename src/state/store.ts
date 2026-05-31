@@ -11,6 +11,7 @@ export interface AppState {
   phase: Phase;
   conn: string;
   sessions: { items: SessionItem[]; active: string | null };
+  sessionsLoaded: boolean;
   history: { loadingFor: string | null; failedFor: string | null };
   stream: StreamItem[];
   pending: { transcript: string } | null;
@@ -24,6 +25,7 @@ export function initialState(): AppState {
     phase: "idle",
     conn: "connecting",
     sessions: { items: [], active: null },
+    sessionsLoaded: false,
     history: { loadingFor: null, failedFor: null },
     stream: [],
     pending: null,
@@ -71,7 +73,14 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
     case "hello.ok":
       return { ...s, sessions: { ...s.sessions, active: m.active } };
     case "sessions":
-      return { ...s, sessions: { items: m.items, active: m.active } };
+      return {
+        ...s,
+        sessionsLoaded: true,
+        sessions: {
+          items: m.items,
+          active: isHistoryLoading(s) ? s.sessions.active : m.active,
+        },
+      };
     case "active":
       return {
         ...s,
@@ -79,9 +88,10 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
         history: { loadingFor: m.id, failedFor: null },
       };
     case "history":
-      if (m.id !== s.sessions.active) return s;
+      if (m.id !== s.sessions.active && m.id !== s.history.loadingFor) return s;
       return {
         ...s,
+        sessions: { ...s.sessions, active: m.id },
         history: { loadingFor: null, failedFor: m.ok === false ? m.id : null },
         stream: m.items,
         pending: null,

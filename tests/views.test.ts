@@ -4,10 +4,15 @@ import { listRows, renderSession } from "../src/ui/views";
 import { initialState, type AppState } from "../src/state/store";
 
 describe("listRows", () => {
+  it("shows a non-actionable loading row until sessions hydrate", () => {
+    expect(listRows(initialState())).toEqual(["loading sessions..."]);
+  });
+
   it("prepends the ＋New row and sorts sessions newest-first", () => {
     const now = 200_000;
     const s: AppState = {
       ...initialState(),
+      sessionsLoaded: true,
       sessions: {
         items: [
           { id: "old", title: "refactor parser", updated: now - 86_400 },
@@ -26,6 +31,7 @@ describe("listRows", () => {
   it("keeps server order when timestamps are equal", () => {
     const s: AppState = {
       ...initialState(),
+      sessionsLoaded: true,
       sessions: {
         items: [
           { id: "a", title: "first", updated: 1 },
@@ -38,13 +44,14 @@ describe("listRows", () => {
   });
 
   it("uses the new-session fallback for untitled sessions", () => {
-    const s: AppState = { ...initialState(), sessions: { items: [{ id: "a", title: "   ", updated: 0 }], active: null } };
+    const s: AppState = { ...initialState(), sessionsLoaded: true, sessions: { items: [{ id: "a", title: "   ", updated: 0 }], active: null } };
     expect(listRows(s, 1)).toEqual(["＋ New session", "  -- New session"]);
   });
 
   it("truncates long rows to fit the native list width", () => {
     const s: AppState = {
       ...initialState(),
+      sessionsLoaded: true,
       sessions: { items: [{ id: "a", title: "W".repeat(80), updated: 1 }], active: "a" },
     };
     const row = listRows(s, 1)[1];

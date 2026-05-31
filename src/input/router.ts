@@ -2,12 +2,17 @@ import { OsEventTypeList } from "@evenrealities/even_hub_sdk";
 import type { EvenHubEvent } from "@evenrealities/even_hub_sdk";
 
 export interface InputActions {
-  onClick: (index?: number) => void;
+  onClick: (selection?: ListSelection) => void;
   onDoubleClick: () => void;
   onScrollUp: () => void;
   onScrollDown: () => void;
   onForegroundEnter?: () => void;
   onForegroundExit?: () => void;
+}
+
+export interface ListSelection {
+  index?: number;
+  name?: string;
 }
 
 export function routeEvent(e: EvenHubEvent, a: InputActions): void {
@@ -19,7 +24,12 @@ export function routeEvent(e: EvenHubEvent, a: InputActions): void {
   const src = e.sysEvent ?? e.listEvent ?? e.textEvent;
   if (!src) return;
   const et = src.eventType ?? OsEventTypeList.CLICK_EVENT;
-  if (et === OsEventTypeList.CLICK_EVENT) a.onClick(e.listEvent?.currentSelectItemIndex);
+  if (et === OsEventTypeList.CLICK_EVENT) {
+    a.onClick(e.listEvent ? {
+      index: e.listEvent.currentSelectItemIndex,
+      name: e.listEvent.currentSelectItemName,
+    } : undefined);
+  }
   else if (et === OsEventTypeList.DOUBLE_CLICK_EVENT) a.onDoubleClick();
   else if (et === OsEventTypeList.SCROLL_TOP_EVENT) a.onScrollUp();
   else if (et === OsEventTypeList.SCROLL_BOTTOM_EVENT) a.onScrollDown();

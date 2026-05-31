@@ -37,7 +37,13 @@ describe("routeEvent", () => {
   it("fires onClick with the selected index for a list-item click with eventType omitted", () => {
     const a = makeActions();
     routeEvent({ listEvent: { currentSelectItemIndex: 3 } } as any, a);
-    expect(a.onClick).toHaveBeenCalledWith(3);
+    expect(a.onClick).toHaveBeenCalledWith({ index: 3, name: undefined });
+  });
+
+  it("passes the list selected name when the host omits the index", () => {
+    const a = makeActions();
+    routeEvent({ listEvent: { currentSelectItemName: "  2h build the app" } } as any, a);
+    expect(a.onClick).toHaveBeenCalledWith({ index: undefined, name: "  2h build the app" });
   });
 
   it("fires onDoubleClick for DOUBLE_CLICK_EVENT via sysEvent", () => {
@@ -102,7 +108,7 @@ describe("routeEvent", () => {
   it("passes the list selected index to onClick", () => {
     const a = { onClick: vi.fn(), onDoubleClick: vi.fn(), onScrollUp: vi.fn(), onScrollDown: vi.fn() };
     routeEvent({ listEvent: { eventType: OsEventTypeList.CLICK_EVENT, currentSelectItemIndex: 2 } } as any, a);
-    expect(a.onClick).toHaveBeenCalledWith(2);
+    expect(a.onClick).toHaveBeenCalledWith({ index: 2, name: undefined });
   });
 
   it("routes FOREGROUND_ENTER to onForegroundEnter", () => {
