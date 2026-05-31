@@ -107,6 +107,25 @@ describe("BridgeClient", () => {
     expect(() => FakeWS.last!.onmessage!({ data: "not json" })).not.toThrow();
     expect(msgs).toEqual([]);
   });
+
+  it("surfaces websocket errors before reconnecting", () => {
+    vi.useFakeTimers();
+    const statuses: string[] = [];
+    const c = new BridgeClient({
+      WS: FakeWS as any,
+      onMessage: () => {},
+      onStatus: (s) => statuses.push(s),
+    });
+    c.connect(profile);
+    FakeWS.last!.onopen!();
+
+    FakeWS.last!.onerror!();
+    vi.runOnlyPendingTimers();
+
+    expect(statuses).toContain("websocket error");
+    expect(statuses).toContain("websocket error; reconnecting");
+    vi.useRealTimers();
+  });
 });
 
 describe("BridgeClient watchdog", () => {

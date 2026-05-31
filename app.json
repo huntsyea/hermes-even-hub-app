@@ -2,12 +2,22 @@
   "package_id": "com.huntsyea.evendev",
   "edition": "202601",
   "name": "Even Dev",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.10",
   "entrypoint": "index.html",
   "permissions": [
-    { "name": "network", "desc": "Connect to local Hermes bridge", "whitelist": ["https://*.ts.net", "wss://*.ts.net"] },
+    {
+      "name": "network",
+      "desc": "Connect to local Hermes bridge",
+      "whitelist": [
+        "https://*.ts.net",
+        "wss://*.ts.net",
+        "https://*.tail587d25.ts.net",
+        "wss://*.tail587d25.ts.net",
+        "wss://hunters-mini.tail587d25.ts.net:8443"
+      ]
+    },
     { "name": "g2-microphone", "desc": "Voice input for Hermes agent" }
   ],
   "supported_languages": [

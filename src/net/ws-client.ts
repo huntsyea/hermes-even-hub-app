@@ -16,6 +16,7 @@ export class BridgeClient {
   private watchdog?: ReturnType<typeof setInterval>;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private lastRecv = 0;
+  private socketErrored = false;
 
   constructor(d: Deps) {
     this.d = d;
@@ -59,6 +60,7 @@ export class BridgeClient {
 
     const ws = new WS(url);
     this.ws = ws as unknown as WebSocket;
+    this.socketErrored = false;
     (ws as any).onopen = () => {
       this.delay = 500;
       this.d.onStatus?.("connected");
@@ -83,11 +85,15 @@ export class BridgeClient {
         this.d.onStatus?.("error: bridge token rejected");
         return;
       }
-      this.d.onStatus?.("reconnecting");
+      this.d.onStatus?.(this.socketErrored ? "websocket error; reconnecting" : "reconnecting");
       this.reconnectTimer = setTimeout(() => this.open(), this.delay);
       this.delay = Math.min(this.delay * 2, 8000);
     };
-    (ws as any).onerror = () => (ws as any).close();
+    (ws as any).onerror = () => {
+      this.socketErrored = true;
+      this.d.onStatus?.("websocket error");
+      (ws as any).close();
+    };
   }
 
   private clearTimers(): void {
