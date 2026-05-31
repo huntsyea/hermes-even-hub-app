@@ -15,8 +15,8 @@ npm run qr           # sideload QR (targets localhost; real glasses need the Mac
 npm run pack         # build + package to hermes-even-hub-app.ehpk
 ```
 
-Copy `.env.example` → `.env.local` and set `VITE_BRIDGE_LAN_URL` + `VITE_BRIDGE_TOKEN`
-(get the URL from `hermes even-g2 url` on the bridge host). **Never commit `.env.local`.**
+The bridge URL and token are configured at runtime in the phone companion UI. `.env.local` is
+optional and only pre-fills developer defaults; never put production secrets in `VITE_*` values.
 
 ## Pull requests
 
@@ -24,7 +24,8 @@ Copy `.env.example` → `.env.local` and set `VITE_BRIDGE_LAN_URL` + `VITE_BRIDG
 - The **wire protocol is a contract**: if you change `src/protocol.ts`, mirror it in the
   bridge's `protocol.py` and note it in the PR.
 - `app.json`: the mic permission is **`g2-microphone`** (not `microphone`, which `evenhub pack`
-  rejects), and the `network` whitelist must contain the exact bridge `ws://…:8765` URL.
+  rejects). The default network whitelist targets Tailscale Serve with `https://*.ts.net` and
+  `wss://*.ts.net`; exact `ws://...` hosts are local sideload-only changes.
 
 ## Security
 

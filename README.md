@@ -17,7 +17,7 @@ that hosts the WebSocket and bridges to the agent — is its sister repo,
 G2 glasses (576×288 + mic)
         ▲
         │  Even Hub WebView
-  this app (TypeScript / Vite)  ──JSON frames + PCM, ws:// (LAN / Tailscale)──▶  hermes-evenhub-bridge
+  this app (TypeScript / Vite)  ──JSON frames + PCM, wss:// (Tailscale Serve)──▶  hermes-evenhub-bridge
         ▲                                                                              │
         └──────────────  assistant deltas · tool status · transcripts  ◀──────────────┘  → Hermes agent
 ```
@@ -28,20 +28,21 @@ G2 glasses (576×288 + mic)
    [hermes-evenhub-bridge](https://github.com/huntsyea/hermes-evenhub-bridge):
    `hermes plugins install huntsyea/hermes-evenhub-bridge`, set `EVENHUB_BRIDGE_TOKEN` in
    `~/.hermes/.env`, enable it, restart the gateway.
-2. **Get the connect URL** from the bridge host: `hermes even-g2 url`
-   (Tailscale-aware — works off the local Wi-Fi).
-3. **Configure this app** — copy `.env.example` → `.env.local` (gitignored):
+2. **Expose the local bridge with Tailscale Serve**:
+   ```bash
+   tailscale serve --https=8443 --bg http://localhost:8765
    ```
-   VITE_BRIDGE_LAN_URL=ws://<host>:8765
-   VITE_BRIDGE_TOKEN=<same shared secret>
-   # optional, for remote over Tailscale:
-   VITE_BRIDGE_REMOTE_URL=ws://<mac>.tailnet-xxxx.ts.net:8765
+3. **Install or sideload this app**, then open its phone companion surface in Even Hub.
+   Enter:
    ```
-   Add that exact `ws://…` URL to `app.json`'s `network` whitelist, then `npm run dev`
-   (or `npm run pack` + `npm run qr` to sideload to real glasses).
+   wss://<node>.<tailnet>.ts.net:8443
+   <same shared bridge token>
+   ```
+   The app stores that profile at runtime with the Even SDK storage API. No token is required
+   in the build.
 
-> `VITE_*` values are baked into the client bundle — treat the token as a shared LAN/Tailnet
-> secret. **Never commit `.env.local`.**
+Optional developer defaults can be set in `.env.local` to prefill the phone setup form during
+local testing, but runtime entry remains the production path.
 
 ## Commands
 
@@ -53,6 +54,27 @@ npm run qr           # QR code for sideloading to real glasses
 npm run pack         # Build + package as .ehpk
 npm run test         # Run vitest suite
 ```
+
+## Runtime Connection Profile
+
+The phone companion UI stores:
+
+```ts
+interface ConnectionProfile {
+  url: string;
+  token: string;
+  activeSession?: string;
+  updatedAt: number;
+}
+```
+
+The profile is persisted under `hermes.connectionProfile.v1`. Older `hermes.lastUrl` and
+`hermes.activeSession` values are read as a migration fallback. If no valid profile exists,
+the glasses show `Open phone app to configure bridge.` and do not attempt a WebSocket connection.
+
+`app.json` ships with `https://*.ts.net` and `wss://*.ts.net` for the Tailscale Serve path.
+For local sideload testing, edit `app.json` to include an exact `ws://...` host if the Even
+review/runtime path does not accept the wildcard Tailscale entries.
 
 ## Interaction model (Terminal-style)
 

@@ -1,49 +1,118 @@
 import { waitForEvenAppBridge, OsEventTypeList } from "@evenrealities/even_hub_sdk";
-import { loadConfig } from "./config";
+import "./style.css";
+import { loadBridgeDefaults } from "./config";
 import { BridgeClient } from "./net/ws-client";
 import { initialState, reduce, type AppState } from "./state/store";
-import { createListStartup, showListPage, showSessionPage } from "./ui/render";
+import { createListStartup, createSetupStartup, showListPage, showSessionPage } from "./ui/render";
 import { renderList, renderSession, listRows } from "./ui/views";
+import { renderPhoneSetup } from "./ui/phone";
 import { routeEvent } from "./input/router";
 import { dispatch, type Gesture, type Effect } from "./input/dispatch";
 import { sessionsList } from "./protocol";
 import { serializeLatest } from "./util/coalesce";
 import { createCapture } from "./audio/capture";
-import { saveConnectionState, loadConnectionState } from "./storage/persist";
+import {
+  loadConnectionProfile,
+  saveConnectionProfile,
+  updateActiveSession,
+  validateConnectionProfile,
+  type ConnectionProfile,
+} from "./storage/persist";
 
 const fireAndForget = (p: Promise<unknown>): void => { void p.catch(() => {}); };
 
 async function boot(): Promise<void> {
+  const root = document.querySelector<HTMLElement>("#app");
+  if (!root) throw new Error("Missing #app root");
+
   const bridge = await waitForEvenAppBridge();
+  const defaults = loadBridgeDefaults();
+  let profile = await loadConnectionProfile(bridge);
   let state: AppState = initialState();
-  await createListStartup(bridge, listRows(state)); // one-shot startup = the list
+  let phoneErrors: string[] = [];
+  let glassesView: "setup" | "list" = profileIsReady(profile) ? "list" : "setup";
 
-  const cfg = loadConfig();
-  const persisted = await loadConnectionState(bridge);
-  const urls = persisted.url
-    ? [persisted.url, cfg.lanUrl, cfg.remoteUrl].filter(Boolean)
-    : [cfg.lanUrl, cfg.remoteUrl];
+  if (glassesView === "list") {
+    await createListStartup(bridge, listRows(state));
+  } else {
+    state = { ...state, conn: "not configured" };
+    await createSetupStartup(bridge);
+  }
 
-  const scheduleRender = serializeLatest((s: AppState) =>
-    s.screen === "list" ? renderList(bridge, s) : renderSession(bridge, s));
+  const scheduleRender = serializeLatest((s: AppState) => {
+    if (glassesView === "setup") return Promise.resolve();
+    return s.screen === "list" ? renderList(bridge, s) : renderSession(bridge, s);
+  });
 
-  let currentUrl = urls[0] ?? "";
-  const client = new BridgeClient(
-    { urls, token: cfg.token },
-    {
-      onMessage: (m) => {
-        state = reduce(state, m);
-        scheduleRender(state);
-        if (m.t === "hello.ok") {
-          client.send(sessionsList()); // populate the list once connected
-          fireAndForget(saveConnectionState(bridge, currentUrl, m.active ?? ""));
-        }
-        if (m.t === "active") fireAndForget(saveConnectionState(bridge, currentUrl, m.id));
+  const renderPhone = (): void => {
+    renderPhoneSetup(root, {
+      profile,
+      defaults,
+      status: state.conn,
+      errors: phoneErrors,
+    }, {
+      onSaveConnect: (url, token) => {
+        fireAndForget(saveAndConnect(url, token));
       },
-      onStatus: (s) => { state = { ...state, conn: s }; scheduleRender(state); },
+      onDisconnect: () => {
+        client.disconnect();
+      },
+    });
+  };
+
+  const setStatus = (conn: string): void => {
+    state = { ...state, conn };
+    scheduleRender(state);
+    renderPhone();
+  };
+
+  const persistActiveSession = (activeSession: string | null): void => {
+    if (!profile) return;
+    fireAndForget(updateActiveSession(bridge, profile, activeSession).then((next) => {
+      profile = next;
+      renderPhone();
+    }));
+  };
+
+  const client = new BridgeClient({
+    onMessage: (m) => {
+      state = reduce(state, m);
+      scheduleRender(state);
+      if (m.t === "hello.ok") {
+        client.send(sessionsList());
+        persistActiveSession(m.active);
+      }
+      if (m.t === "active") persistActiveSession(m.id);
     },
-  );
-  client.connect();
+    onStatus: setStatus,
+  });
+
+  async function saveAndConnect(url: string, token: string): Promise<void> {
+    const candidate: ConnectionProfile = {
+      url,
+      token,
+      activeSession: profile?.activeSession,
+      updatedAt: Date.now(),
+    };
+    const validation = validateConnectionProfile(candidate);
+    if (!validation.valid) {
+      phoneErrors = validation.errors;
+      setStatus("not configured");
+      return;
+    }
+
+    phoneErrors = [];
+    profile = await saveConnectionProfile(bridge, candidate);
+    if (glassesView === "setup") {
+      glassesView = "list";
+      await showListPage(bridge, listRows(state));
+    }
+    client.connect(profile);
+    renderPhone();
+  }
+
+  renderPhone();
+  if (profileIsReady(profile)) client.connect(profile);
 
   const capture = createCapture(bridge, client);
 
@@ -55,34 +124,36 @@ async function boot(): Promise<void> {
   }
 
   async function applyGesture(g: Gesture, index?: number): Promise<void> {
+    if (glassesView === "setup") {
+      if (g === "doubleClick") bridge.shutDownPageContainer(1);
+      return;
+    }
+
     const prevScreen = state.screen;
     const r = dispatch(state, g, index);
     state = r.state;
     for (const e of r.effects) runEffect(e);
     if (state.screen !== prevScreen) {
-      // Page kind changed — rebuild before filling content.
       if (state.screen === "list") await showListPage(bridge, listRows(state));
       else await showSessionPage(bridge);
     }
     scheduleRender(state);
   }
 
-  // Full teardown only on real exit (system/abnormal), per handle-input skill.
   let torn = false;
   function teardown(): void {
     if (torn) return;
     torn = true;
     off();
     void capture.stop();
-    client.close();
+    client.disconnect();
   }
 
   const off = bridge.onEvenHubEvent((e) => {
     capture.handleEvent(e);
     const et = e.sysEvent?.eventType ?? e.listEvent?.eventType ?? e.textEvent?.eventType;
-    // Lifecycle: background = flush only; system/abnormal exit = teardown.
     if (et === OsEventTypeList.FOREGROUND_EXIT_EVENT) {
-      fireAndForget(saveConnectionState(bridge, currentUrl, state.sessions.active ?? ""));
+      if (profile) fireAndForget(updateActiveSession(bridge, profile, state.sessions.active ?? ""));
       return;
     }
     if (et === OsEventTypeList.SYSTEM_EXIT_EVENT || et === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
@@ -99,6 +170,10 @@ async function boot(): Promise<void> {
 
   window.addEventListener("beforeunload", teardown);
   console.log("[glasses] ready");
+}
+
+function profileIsReady(profile: ConnectionProfile | null): profile is ConnectionProfile {
+  return !!profile && validateConnectionProfile(profile).valid;
 }
 
 boot().catch((err) => console.error("[glasses] boot failed", err));
