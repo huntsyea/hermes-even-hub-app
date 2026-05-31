@@ -58,6 +58,25 @@ export async function createListStartup(bridge: EvenAppBridge, rows: string[]): 
   }));
 }
 
+export async function createSetupStartup(bridge: EvenAppBridge): Promise<void> {
+  await bridge.createStartUpPageContainer(new CreateStartUpPageContainer({
+    containerTotalNum: 1,
+    textObject: [
+      new TextContainerProperty({
+        containerID: IDS.body,
+        containerName: "body",
+        xPosition: 0,
+        yPosition: 0,
+        width: 576,
+        height: 288,
+        paddingLength: 12,
+        isEventCapture: 1,
+        content: "Open phone app\nto configure bridge.",
+      }),
+    ],
+  }));
+}
+
 export async function showListPage(bridge: EvenAppBridge, rows: string[]): Promise<void> {
   await bridge.rebuildPageContainer(new RebuildPageContainer({
     containerTotalNum: 1,

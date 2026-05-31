@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { setText, IDS, createListStartup, showListPage, showSessionPage } from "../src/ui/render";
+import { setText, IDS, createListStartup, createSetupStartup, showListPage, showSessionPage } from "../src/ui/render";
 
 function fakeBridge() {
   return {
@@ -26,13 +26,27 @@ describe("list pages", () => {
     const b = fakeBridge();
     await createListStartup(b, ["＋ New session", "A"]);
     const arg = b.createStartUpPageContainer.mock.calls[0][0];
+    expect(arg.containerTotalNum).toBe(1);
+    expect(arg.listObject).toHaveLength(1);
     expect(arg.listObject[0].itemContainer.itemName).toEqual(["＋ New session", "A"]);
   });
   it("showListPage rebuilds the list page with the rows", async () => {
     const b = fakeBridge();
     await showListPage(b, ["＋ New session"]);
     const arg = b.rebuildPageContainer.mock.calls[0][0];
+    expect(arg.containerTotalNum).toBe(1);
+    expect(arg.listObject).toHaveLength(1);
     expect(arg.listObject[0].itemContainer.itemName).toEqual(["＋ New session"]);
+  });
+});
+
+describe("setup page", () => {
+  it("createSetupStartup builds a one-shot phone handoff message", async () => {
+    const b = fakeBridge();
+    await createSetupStartup(b);
+    const arg = b.createStartUpPageContainer.mock.calls[0][0];
+    expect(arg.containerTotalNum).toBe(1);
+    expect(arg.textObject[0].content).toBe("Open phone app\nto configure bridge.");
   });
 });
 
