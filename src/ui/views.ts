@@ -1,5 +1,5 @@
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
-import type { AppState } from "../state/store";
+import type { AppState, StreamItem } from "../state/store";
 import { barText, connDot } from "../state/store";
 import { IDS, setText, showListPage } from "./render";
 import { sessionListRows, truncateTitle } from "./session-list";
@@ -25,24 +25,30 @@ export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise
   await setText(bridge, IDS.dot, connDot(s.conn));
 
   const body =
-    s.phase === "review" && s.pending
-      ? `"${s.pending.transcript}"`
-      : s.stream.length === 0
-        ? "tap to speak"
-        : threadViewportText(s);
+    displayThreadItems(s).length === 0
+      ? "tap to speak"
+      : threadViewportText(s);
   await setText(bridge, IDS.body, body);
 
   await setText(bridge, IDS.status, statusText(s));
 }
 
 function threadViewportText(s: AppState): string {
-  return currentThreadViewport(s.stream, s.scrollPage).content;
+  return currentThreadViewport(displayThreadItems(s), s.scrollPage).content;
+}
+
+function displayThreadItems(s: AppState): StreamItem[] {
+  if (s.phase === "review" && s.pending) {
+    return [...s.stream, { kind: "user", text: s.pending.transcript }];
+  }
+  return s.stream;
 }
 
 function statusText(s: AppState): string {
   const base = barText(s);
-  if (s.phase !== "idle" || s.stream.length === 0) return base;
+  const items = displayThreadItems(s);
+  if (s.phase !== "idle" || items.length === 0) return base;
 
-  const viewport = currentThreadViewport(s.stream, s.scrollPage);
+  const viewport = currentThreadViewport(items, s.scrollPage);
   return viewport.total > 1 ? `${base} · ${viewport.index + 1}/${viewport.total}` : base;
 }

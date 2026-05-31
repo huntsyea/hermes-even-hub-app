@@ -28,7 +28,10 @@ export interface ThreadViewport {
 
 function renderItem(it: StreamItem): string {
   if (it.kind === "user") return `> ${it.text}`;
-  if (it.kind === "tool") return `▸ ${it.name}${it.running ? "" : it.ok === false ? " ✗" : " ✓"}`;
+  if (it.kind === "tool") {
+    const label = it.label?.trim() || it.name;
+    return `/ ${label}${it.running ? "" : it.ok === false ? " fail" : " ok"}`;
+  }
   if (it.kind === "banner") {
     const body = it.text.split("\n").map((l) => ` ${l}`).join("\n");
     return `${RULE}\n${body}\n${RULE}`;
@@ -36,19 +39,8 @@ function renderItem(it: StreamItem): string {
   return it.text; // assistant
 }
 
-// Items join with "\n"; an extra blank line separates everything EXCEPT two
-// adjacent tool calls, so a multi-tool run reads as one tight block while a
-// tool group is visually broken away from the agent text around it.
 export function streamToText(items: StreamItem[]): string {
-  let out = "";
-  for (let i = 0; i < items.length; i++) {
-    if (i > 0) {
-      const tightTools = items[i - 1].kind === "tool" && items[i].kind === "tool";
-      out += tightTools ? "\n" : "\n\n";
-    }
-    out += renderItem(items[i]);
-  }
-  return out;
+  return items.map(renderItem).join("\n");
 }
 
 export function wrapTextLines(text: string, maxWidth = THREAD_BODY_INNER_WIDTH): string[] {

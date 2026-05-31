@@ -29,7 +29,8 @@ Discriminator field: `t` (string, required on every frame)
 | `sessions`   | `items: SessionItem[]`, `active: string \| null`                | Full session list. `active` is the currently active session ID. |
 | `active`     | `id: string`                                                    | Notifies the client which session is now active (after switch or new). |
 | `transcript` | `text: string`                                                  | A transcription chunk of user speech. |
-| `assistant`  | `text: string`                                                  | **Full accumulated assistant text so far.** The client MUST replace (not append) its displayed body with this value each time it arrives. The bridge accumulates deltas and always emits the running total. |
+| `assistant`  | `text: string`                                                  | Full assistant text snapshot for the current message segment. The client replaces the current assistant segment when this arrives. |
+| `assistant.delta` | `text: string`                                             | Append-only assistant text chunk. This is the normal bridge streaming path. |
 | `tool.start` | `name: string`, `label?: string`, `emoji?: string`              | A tool invocation has started. `label` and `emoji` are optional and omitted from the frame when empty. |
 | `tool.end`   | `name: string`, `ok: boolean`                                   | A tool invocation completed. `ok=false` indicates failure. |
 | `turn.done`  | _(none)_                                                        | The assistant turn is complete; no further `assistant` or `tool.*` frames will arrive for this turn. |
@@ -66,8 +67,8 @@ The bridge connects to a Hermes API server that emits Server-Sent Events. This s
 
 | Hermes SSE event       | Relevant data fields                                                   | Glasses frame emitted |
 |------------------------|------------------------------------------------------------------------|-----------------------|
-| `assistant.delta`      | `data.delta` — incremental text chunk                                  | Bridge **accumulates** all deltas, then emits `assistant{text=<accumulated so far>}` |
-| `assistant.completed`  | `data.content` — full final text                                       | `assistant{text=data.content}` — authoritative final value; bridge resets accumulator |
+| `assistant.delta`      | `data.delta` — incremental text chunk                                  | Bridge diffs the gateway's accumulated text and emits `assistant.delta{text=<unsent suffix>}` |
+| `assistant.completed`  | `data.content` — full final text                                       | `assistant{text=data.content}` — authoritative final snapshot when available |
 | `tool.started`         | `data.tool_name`, `data.preview` (human label), `data.args`            | `tool.start{name=tool_name, label=preview}` |
 | `tool.completed`       | `data.tool_name`                                                        | `tool.end{name=tool_name, ok=true}` |
 | `done`                 | _(named terminal event, no data fields required)_                       | `turn.done{}` |

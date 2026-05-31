@@ -52,6 +52,15 @@ describe("reduce: stream", () => {
       { kind: "assistant", text: "hello there" },
     ]);
   });
+  it("full assistant frames replace the current assistant snapshot", () => {
+    let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
+    s = reduce(s, { t: "assistant", text: "hello" });
+    s = reduce(s, { t: "assistant", text: "hello there" });
+    expect(s.stream).toEqual([
+      { kind: "user", text: "hi" },
+      { kind: "assistant", text: "hello there" },
+    ]);
+  });
   it("a delta after a tool opens a NEW assistant segment", () => {
     let s: AppState = { ...initialState(), stream: [{ kind: "user", text: "hi" }] };
     s = reduce(s, { t: "assistant.delta", text: "Checking…" });
@@ -72,9 +81,9 @@ describe("reduce: stream", () => {
   });
   it("patches the matching running tool to done on tool.end", () => {
     let s = initialState();
-    s = reduce(s, { t: "tool.start", name: "terminal" });
+    s = reduce(s, { t: "tool.start", name: "terminal", label: "Run terminal" });
     s = reduce(s, { t: "tool.end", name: "terminal", ok: true });
-    expect(s.stream).toEqual([{ kind: "tool", name: "terminal", running: false, ok: true }]);
+    expect(s.stream).toEqual([{ kind: "tool", name: "terminal", label: "Run terminal", running: false, ok: true }]);
   });
   it("sets turn=idle on turn.done", () => {
     let s = reduce(initialState(), { t: "tool.start", name: "x" });
@@ -93,10 +102,11 @@ describe("reduce: stream", () => {
 
 describe("reduce: transcript guard", () => {
   it("sets pending + review only when phase is transcribing", () => {
-    const s = { ...initialState(), screen: "session" as const, phase: "transcribing" as const };
+    const s = { ...initialState(), screen: "session" as const, phase: "transcribing" as const, scrollPage: 2 };
     const next = reduce(s, { t: "transcript", text: "add dark mode" });
     expect(next.pending).toEqual({ transcript: "add dark mode" });
     expect(next.phase).toBe("review");
+    expect(next.scrollPage).toBeNull();
   });
   it("ignores a transcript that arrives in any other phase (cancel path)", () => {
     const s = { ...initialState(), screen: "session" as const, phase: "idle" as const };

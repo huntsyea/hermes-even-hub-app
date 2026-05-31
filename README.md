@@ -113,9 +113,10 @@ what's happening now:
 
 Inside a session, **tap to start recording**; the mic captures PCM audio (16 kHz, s16le,
 mono) and streams it as binary WebSocket frames to the bridge. **Tap again to stop** — the
-bridge transcribes via `faster-whisper` and returns the transcript. You **review** it on
-the glasses, then **tap to send** it to Hermes (or **swipe down to redo**). Assistant
-replies stream back as incremental deltas and interleave with tool-call lines.
+bridge transcribes via `faster-whisper` and returns the transcript. You **review** it inline
+as the next `>` line in the thread, then **tap to send** it to Hermes (or **swipe down to
+redo**). Assistant replies stream back as incremental deltas and interleave with one-line
+tool-call rows.
 
 ## Packaging
 

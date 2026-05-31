@@ -71,13 +71,26 @@ describe("renderSession", () => {
     expect(calls[2]).toBe("> hi");                // IDS.body
     expect(calls[3]).toBe("ready for input");     // IDS.status
   });
-  it("shows the pending transcript in the body during review", async () => {
+  it("shows the pending transcript as the next user line during review", async () => {
     const calls: Record<number, string> = {};
     const bridge = { textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }) } as any;
     const s: AppState = { ...initialState(), screen: "session", phase: "review", conn: "connected",
       sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" }, pending: { transcript: "add dark mode" } };
     await renderSession(bridge, s);
-    expect(calls[2]).toBe('"add dark mode"');
+    expect(calls[2]).toBe("> add dark mode");
+    expect(calls[3]).toBe("tap = send · swipe↓ = redo");
+  });
+  it("keeps the thread visible behind a pending transcript", async () => {
+    const calls: Record<number, string> = {};
+    const bridge = { textContainerUpgrade: vi.fn(async (u: any) => { calls[u.containerID] = u.content; }) } as any;
+    const s: AppState = {
+      ...initialState(), screen: "session", phase: "review", conn: "connected",
+      sessions: { items: [{ id: "a", title: "A", updated: 0 }], active: "a" },
+      stream: [{ kind: "user", text: "hi" }, { kind: "assistant", text: "Hello." }],
+      pending: { transcript: "add dark mode" },
+    };
+    await renderSession(bridge, s);
+    expect(calls[2]).toBe("> hi\nHello.\n> add dark mode");
   });
   it("renders the held page when scrollPage is an absolute index", async () => {
     const calls: Record<number, string> = {};

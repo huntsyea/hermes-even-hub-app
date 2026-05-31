@@ -59,8 +59,9 @@ function session(phase: AppState["phase"]): AppState {
 
 describe("dispatch: session idle", () => {
   it("tap starts recording", () => {
-    const r = dispatch(session("idle"), "click");
+    const r = dispatch({ ...session("idle"), scrollPage: 3 }, "click");
     expect(r.state.phase).toBe("recording");
+    expect(r.state.scrollPage).toBeNull();
     expect(r.effects).toEqual([{ kind: "startMic" }]);
   });
   it("double-press returns to the list", () => {

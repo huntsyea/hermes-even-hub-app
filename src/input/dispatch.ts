@@ -33,7 +33,7 @@ export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResul
   }
   // screen === "session"
   if (s.phase === "idle") {
-    if (g === "click") return { state: { ...s, phase: "recording" }, effects: [{ kind: "startMic" }] };
+    if (g === "click") return { state: { ...s, phase: "recording", scrollPage: null }, effects: [{ kind: "startMic" }] };
     if (g === "doubleClick") return { state: { ...s, screen: "list", phase: "idle", pending: null }, effects: [{ kind: "send", frame: sessionsList() }] };
     if (g === "scrollUp") {
       const prev = previousThreadViewportIndex(s.stream, s.scrollPage);

@@ -16,7 +16,7 @@ import type { StreamItem } from "../src/state/store";
 const RULE = "─".repeat(26);
 
 describe("streamToText", () => {
-  it("> user, ▸ tool (running/done/failed), plain assistant", () => {
+  it("> user, / tool (running/done/failed), plain assistant", () => {
     const items: StreamItem[] = [
       { kind: "user", text: "add dark mode" },
       { kind: "tool", name: "terminal", running: false, ok: true },
@@ -24,18 +24,21 @@ describe("streamToText", () => {
       { kind: "tool", name: "grep", running: true },
     ];
     expect(streamToText(items)).toBe(
-      "> add dark mode\n\n▸ terminal ✓\n\nAdded it.\n\n▸ grep",
+      "> add dark mode\n/ terminal ok\nAdded it.\n/ grep",
     );
   });
-  it("marks a failed tool with ✗", () => {
-    expect(streamToText([{ kind: "tool", name: "x", running: false, ok: false }])).toBe("▸ x ✗");
+  it("renders tool labels when present", () => {
+    expect(streamToText([{ kind: "tool", name: "kanban_view", label: "Kanban view", running: true }])).toBe("/ Kanban view");
+  });
+  it("marks a failed tool with fail", () => {
+    expect(streamToText([{ kind: "tool", name: "x", running: false, ok: false }])).toBe("/ x fail");
   });
   it("keeps consecutive tool calls tight (single newline)", () => {
     const items: StreamItem[] = [
       { kind: "tool", name: "a", running: false, ok: true },
       { kind: "tool", name: "b", running: false, ok: true },
     ];
-    expect(streamToText(items)).toBe("▸ a ✓\n▸ b ✓");
+    expect(streamToText(items)).toBe("/ a ok\n/ b ok");
   });
   it("fences a banner with horizontal rules", () => {
     const items: StreamItem[] = [{ kind: "banner", text: "model: claude-opus\ncwd: ~/dev" }];
@@ -46,7 +49,7 @@ describe("streamToText", () => {
       { kind: "banner", text: "model: x" },
       { kind: "user", text: "hi" },
     ];
-    expect(streamToText(items)).toBe(`${RULE}\n model: x\n${RULE}\n\n> hi`);
+    expect(streamToText(items)).toBe(`${RULE}\n model: x\n${RULE}\n> hi`);
   });
   it("returns empty string for an empty stream", () => {
     expect(streamToText([])).toBe("");
