@@ -4,8 +4,8 @@ import { initialState, type AppState } from "../src/state/store";
 import { sessionsNew, sessionsSwitch, textMsg, sessionsList } from "../src/protocol";
 import { threadPages } from "../src/ui/stream";
 
-function listWith(items: { id: string; title: string }[]): AppState {
-  return { ...initialState(), sessions: { items: items.map((i) => ({ ...i, updated: 0 })), active: null } };
+function listWith(items: { id: string; title: string; updated?: number }[]): AppState {
+  return { ...initialState(), sessions: { items: items.map((i) => ({ ...i, updated: i.updated ?? 0 })), active: null } };
 }
 
 describe("dispatch: list", () => {
@@ -21,6 +21,25 @@ describe("dispatch: list", () => {
     expect(r.state.screen).toBe("session");
     expect(r.state.sessions.active).toBe("a");
     expect(r.effects).toEqual([{ kind: "send", frame: sessionsSwitch("a") }]);
+  });
+  it("index 1 opens the newest session when the server sends oldest-first", () => {
+    const r = dispatch(listWith([
+      { id: "old", title: "Old", updated: 1 },
+      { id: "new", title: "New", updated: 3 },
+      { id: "middle", title: "Middle", updated: 2 },
+    ]), "click", 1);
+    expect(r.state.screen).toBe("session");
+    expect(r.state.sessions.active).toBe("new");
+    expect(r.effects).toEqual([{ kind: "send", frame: sessionsSwitch("new") }]);
+  });
+  it("list indexes follow newest-first order after the new row", () => {
+    const r = dispatch(listWith([
+      { id: "old", title: "Old", updated: 1 },
+      { id: "new", title: "New", updated: 3 },
+      { id: "middle", title: "Middle", updated: 2 },
+    ]), "click", 2);
+    expect(r.state.sessions.active).toBe("middle");
+    expect(r.effects).toEqual([{ kind: "send", frame: sessionsSwitch("middle") }]);
   });
   it("double-press exits the app", () => {
     const r = dispatch(listWith([]), "doubleClick");
