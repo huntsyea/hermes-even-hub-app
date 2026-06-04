@@ -34,6 +34,14 @@ export function displayTitle(title: string): string {
   return title.trim() || "New session";
 }
 
+function sessionRowTitle(item: SessionItem): string {
+  const title = displayTitle(item.title);
+  if (title !== "New session") return title;
+
+  const suffix = item.id.replace(/[^a-z0-9]/gi, "").slice(-4);
+  return suffix ? `${title} ${suffix}` : title;
+}
+
 export function truncateTitle(title: string, maxWidth = SESSION_HEADER_WIDTH_PX, maxChars = MAX_ITEM_CHARS): string {
   const text = displayTitle(title);
   if (fits(text, maxWidth, maxChars)) return text;
@@ -62,7 +70,7 @@ function formatSessionRow(item: SessionItem, active: string | null, nowSeconds: 
   const marker = item.id === active ? "●" : " ";
   const prefix = `${marker} ${compactAge(item.updated, nowSeconds)} `;
   const title = truncateTitle(
-    item.title,
+    sessionRowTitle(item),
     LIST_ROW_WIDTH_PX - getTextWidth(prefix),
     MAX_ITEM_CHARS - prefix.length,
   );

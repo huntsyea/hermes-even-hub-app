@@ -43,9 +43,9 @@ describe("listRows", () => {
     expect(listRows(s, 1).slice(1)).toEqual(["  now first", "  now second"]);
   });
 
-  it("uses the new-session fallback for untitled sessions", () => {
+  it("uses a stable new-session fallback for untitled sessions", () => {
     const s: AppState = { ...initialState(), sessionsLoaded: true, sessions: { items: [{ id: "a", title: "   ", updated: 0 }], active: null } };
-    expect(listRows(s, 1)).toEqual(["＋ New session", "  -- New session"]);
+    expect(listRows(s, 1)).toEqual(["＋ New session", "  -- New session a"]);
   });
 
   it("truncates long rows to fit the native list width", () => {
