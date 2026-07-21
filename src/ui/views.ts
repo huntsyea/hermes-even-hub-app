@@ -1,9 +1,13 @@
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import type { AppState, StreamItem } from "../state/store";
 import { barText, connDot, isHistoryLoading } from "../state/store";
-import { IDS, setText, showListPage, showLoadingPage } from "./render";
+import {
+  IDS, pushPageImage, setText, showListPage, showLoadingPage,
+  showPageImageLayout, showSessionPage,
+} from "./render";
 import { LOADING_SESSIONS_ROW, sessionListRows, truncateTitle } from "./session-list";
 import { currentThreadViewport } from "./stream";
+import { pageViewports } from "./page-view";
 
 export function truncateRow(title: string): string {
   return truncateTitle(title);
@@ -48,6 +52,68 @@ export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise
 
 function threadViewportText(s: AppState): string {
   return currentThreadViewport(displayThreadItems(s), s.scrollPage).content;
+}
+
+// Page view rebuilds layout only when crossing text↔image (or on entry);
+// text→text renders update container content in place.
+let pageLayout: "none" | "text" | "image" = "none";
+export function resetPageLayout(): void {
+  pageLayout = "none";
+}
+
+export async function renderPage(bridge: EvenAppBridge, s: AppState): Promise<void> {
+  const p = s.page;
+  if (!p) return;
+  const host = pageHost(p.url);
+  const title = p.title.trim() ? truncateRow(p.title) : host;
+
+  if (p.loading || p.error) {
+    await ensurePageTextLayout(bridge);
+    await setText(bridge, IDS.header, title);
+    await setText(bridge, IDS.dot, "◌");
+    await setText(bridge, IDS.body, p.error ? `error:\n${p.error}` : `loading page…\n${host}`);
+    await setText(bridge, IDS.status, "dbl-tap = back");
+    return;
+  }
+
+  const viewports = pageViewports(p);
+  const index = Math.min(Math.max(p.page, 0), viewports.length - 1);
+  const vp = viewports[index];
+  const position = `${index + 1}/${viewports.length}`;
+
+  const linksHint = p.links.length ? ` · tap = ${p.links.length} links` : "";
+
+  if (vp.kind === "text") {
+    await ensurePageTextLayout(bridge);
+    await setText(bridge, IDS.header, title);
+    await setText(bridge, IDS.dot, "●");
+    await setText(bridge, IDS.body, vp.content);
+    await setText(bridge, IDS.status, `${position} · ${host}${linksHint} · dbl-tap = back`);
+    return;
+  }
+
+  // Image viewports rebuild every time: the container is sized per image.
+  await showPageImageLayout(bridge, vp.image.width, vp.image.height);
+  pageLayout = "image";
+  await setText(bridge, IDS.header, title);
+  const result = await pushPageImage(bridge, vp.image.data);
+  const label = result === "success" ? "image" : `img err: ${result}`;
+  await setText(bridge, IDS.status, `${position} · ${label}${linksHint} · dbl-tap = back`);
+}
+
+async function ensurePageTextLayout(bridge: EvenAppBridge): Promise<void> {
+  if (pageLayout !== "text") {
+    await showSessionPage(bridge);
+    pageLayout = "text";
+  }
+}
+
+function pageHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
 }
 
 function displayThreadItems(s: AppState): StreamItem[] {

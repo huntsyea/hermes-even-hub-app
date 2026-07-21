@@ -56,6 +56,10 @@ export function threadPages(items: StreamItem[]): string[] {
   return threadViewports(items).map((viewport) => viewport.content);
 }
 
+export function textPages(text: string): string[] {
+  return viewportsForText(text).map((viewport) => viewport.content);
+}
+
 export function currentThreadViewport(items: StreamItem[], scrollPage: number | null): ThreadViewport {
   const viewports = threadViewports(items);
   const idx = scrollPage === null ? viewports.length - 1 : clampIndex(scrollPage, viewports.length);
@@ -66,12 +70,16 @@ export function previousThreadViewportIndex(items: StreamItem[], scrollPage: num
   const viewports = threadViewports(items);
   if (viewports.length <= 1) return null;
   const current = scrollPage === null ? viewports.length - 1 : clampIndex(scrollPage, viewports.length);
-  return current === 0 ? 0 : current - 1;
+  // At the first page, wrap to the live tail (null = follow the last page).
+  return current === 0 ? null : current - 1;
 }
 
 export function nextThreadViewportCursor(items: StreamItem[], scrollPage: number | null): number | null {
-  if (scrollPage === null) return null;
   const viewports = threadViewports(items);
+  if (scrollPage === null) {
+    // Already at the live tail: one more scroll-down wraps to the first page.
+    return viewports.length > 1 ? 0 : null;
+  }
   const next = clampIndex(scrollPage, viewports.length) + 1;
   return next >= viewports.length - 1 ? null : next;
 }

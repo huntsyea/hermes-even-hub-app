@@ -11,6 +11,17 @@ export type HistoryItem =
   | { kind: "assistant"; text: string }
   | { kind: "banner"; text: string };
 
+export interface PageImage {
+  data: string; // base64 PNG (greyscale, ≤288×144)
+  width: number;
+  height: number;
+}
+
+export interface PageLink {
+  url: string;
+  label: string;
+}
+
 export type ServerMsg =
   | { t: "hello.ok"; caps: Record<string, unknown>; active: string | null }
   | { t: "sessions"; items: SessionItem[]; active: string | null }
@@ -22,6 +33,8 @@ export type ServerMsg =
   | { t: "tool.start"; name: string; label?: string; emoji?: string }
   | { t: "tool.end"; name: string; ok: boolean }
   | { t: "turn.done" }
+  | { t: "page.data"; url: string; title: string; text: string; images: PageImage[]; links: PageLink[] }
+  | { t: "page.error"; url: string; msg: string }
   | { t: "error"; msg: string };
 
 const SERVER_TYPES = new Set([
@@ -35,6 +48,8 @@ const SERVER_TYPES = new Set([
   "tool.start",
   "tool.end",
   "turn.done",
+  "page.data",
+  "page.error",
   "error",
 ]);
 
@@ -55,6 +70,8 @@ export const stopMsg = () => JSON.stringify({ t: "stop" });
 
 export const audioStart = () => JSON.stringify({ t: "audio.start" });
 export const audioStop = () => JSON.stringify({ t: "audio.stop" });
+
+export const pageOpen = (url: string) => JSON.stringify({ t: "page.open", url });
 
 export function parseServer(raw: string): ServerMsg {
   const m = JSON.parse(raw);

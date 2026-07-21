@@ -4,7 +4,9 @@ import { loadBridgeDefaults } from "./config";
 import { BridgeClient } from "./net/ws-client";
 import { initialState, reduce, type AppState } from "./state/store";
 import { createLoadingStartup, createSetupStartup, showListPage, showLoadingPage, showSessionPage } from "./ui/render";
-import { loadingText, renderSession, listRows } from "./ui/views";
+import { loadingText, renderPage, renderSession, resetPageLayout, listRows } from "./ui/views";
+import { linkRows } from "./util/links";
+import { menuRows } from "./util/menu";
 import { renderPhoneSetup } from "./ui/phone";
 import { routeEvent, type ListSelection } from "./input/router";
 import { dispatch, type Gesture, type Effect } from "./input/dispatch";
@@ -49,6 +51,15 @@ async function boot(): Promise<void> {
       visibleListRows = listRows(s);
       return showListPage(bridge, visibleListRows);
     }
+    if (s.screen === "menu") {
+      visibleListRows = menuRows(s);
+      return showListPage(bridge, visibleListRows);
+    }
+    if (s.screen === "links") {
+      visibleListRows = linkRows(s.links);
+      return showListPage(bridge, visibleListRows);
+    }
+    if (s.screen === "page") return renderPage(bridge, s);
     return renderSession(bridge, s);
   });
 
@@ -174,6 +185,15 @@ async function boot(): Promise<void> {
         visibleListRows = listRows(state);
         await showListPage(bridge, visibleListRows);
       }
+      else if (state.screen === "menu") {
+        visibleListRows = menuRows(state);
+        await showListPage(bridge, visibleListRows);
+      }
+      else if (state.screen === "links") {
+        visibleListRows = linkRows(state.links);
+        await showListPage(bridge, visibleListRows);
+      }
+      else if (state.screen === "page") resetPageLayout();
       else await showSessionPage(bridge);
     }
     scheduleRender(state);

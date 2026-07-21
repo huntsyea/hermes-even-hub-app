@@ -1,14 +1,15 @@
 import {
   CreateStartUpPageContainer, RebuildPageContainer,
+  ImageContainerProperty, ImageRawDataUpdate,
   ListContainerProperty, ListItemContainerProperty,
   TextContainerProperty, TextContainerUpgrade,
 } from "@evenrealities/even_hub_sdk";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 
-export const IDS = { header: 1, body: 2, status: 3, list: 4, dot: 5 } as const;
+export const IDS = { header: 1, body: 2, status: 3, list: 4, dot: 5, pageImage: 6 } as const;
 export const NAMES: Record<number, string> = {
   [IDS.header]: "header", [IDS.body]: "body", [IDS.status]: "status",
-  [IDS.list]: "list", [IDS.dot]: "dot",
+  [IDS.list]: "list", [IDS.dot]: "dot", [IDS.pageImage]: "pageimg",
 };
 
 // The 4 chat text containers (header, dot, body, status), shared by showSessionPage.
@@ -112,6 +113,40 @@ export async function showListPage(bridge: EvenAppBridge, rows: string[]): Promi
     containerTotalNum: 1,
     listObject: listContainer(rows),
   }));
+}
+
+// Page-view image layout: header + centered image container + status bar.
+// Image containers cap at 288×144 (SDK constraint); callers pass the final
+// thumbnail size. updateImageRawData pushes must be serial (glasses-ui).
+export async function showPageImageLayout(
+  bridge: EvenAppBridge, width: number, height: number,
+): Promise<void> {
+  const x = Math.max(0, Math.round((576 - width) / 2));
+  const y = 44 + Math.max(0, Math.round((200 - height) / 2));
+  await bridge.rebuildPageContainer(new RebuildPageContainer({
+    containerTotalNum: 3,
+    textObject: [
+      new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0, yPosition: 0,   width: 576, height: 40, paddingLength: 4, content: "", isEventCapture: 1 }),
+      new TextContainerProperty({ containerID: IDS.status, containerName: "status", xPosition: 0, yPosition: 248, width: 576, height: 36, paddingLength: 4, content: "" }),
+    ],
+    imageObject: [
+      new ImageContainerProperty({ containerID: IDS.pageImage, containerName: NAMES[IDS.pageImage], xPosition: x, yPosition: y, width, height }),
+    ],
+  }));
+}
+
+// The host reliably accepts binary PNG bytes (the official image template
+// passes Uint8Array); base64 strings are typed as accepted but fail on-device.
+export async function pushPageImage(bridge: EvenAppBridge, base64Png: string): Promise<string> {
+  const raw = atob(base64Png);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  const result = await bridge.updateImageRawData(new ImageRawDataUpdate({
+    containerID: IDS.pageImage,
+    containerName: NAMES[IDS.pageImage],
+    imageData: bytes,
+  }));
+  return String(result);
 }
 
 export async function setText(bridge: EvenAppBridge, id: number, content: string): Promise<void> {

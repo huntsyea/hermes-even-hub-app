@@ -1,10 +1,22 @@
-import type { HistoryItem, ServerMsg, SessionItem } from "../protocol";
+import type { HistoryItem, PageImage, PageLink, ServerMsg, SessionItem } from "../protocol";
 
-export type Screen = "list" | "session";
+export type Screen = "list" | "session" | "menu" | "links" | "page";
 export type Phase = "idle" | "recording" | "transcribing" | "review";
 export type Turn = "idle" | "thinking" | "working";
 
 export type StreamItem = HistoryItem;
+export type { PageImage, PageLink };
+
+export interface PageState {
+  url: string;
+  title: string;
+  text: string;
+  images: PageImage[];
+  links: PageLink[]; // links found on this page (for in-page navigation)
+  loading: boolean;
+  error: string | null;
+  page: number; // current viewport index within the page view
+}
 
 export interface AppState {
   screen: Screen;
@@ -17,6 +29,10 @@ export interface AppState {
   pending: { transcript: string } | null;
   turn: Turn;
   scrollPage: number | null; // null = follow latest viewport; number = measured viewport index (held)
+  links: PageLink[]; // rows behind the "links" screen (row 0 = back)
+  linksFrom: "session" | "page"; // where the links screen returns to
+  page: PageState | null;
+  pageStack: PageState[]; // back-history for in-page link navigation
 }
 
 export function initialState(): AppState {
@@ -31,6 +47,10 @@ export function initialState(): AppState {
     pending: null,
     turn: "idle",
     scrollPage: null,
+    links: [],
+    linksFrom: "session",
+    page: null,
+    pageStack: [],
   };
 }
 
@@ -122,6 +142,19 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
       return m.text.trim()
         ? { ...s, pending: { transcript: m.text }, phase: "review", scrollPage: null }
         : { ...s, phase: "idle" };
+    case "page.data":
+      if (!s.page || s.page.url !== m.url) return s;
+      return {
+        ...s,
+        page: {
+          ...s.page,
+          title: m.title, text: m.text, images: m.images, links: m.links ?? [],
+          loading: false, error: null, page: 0,
+        },
+      };
+    case "page.error":
+      if (!s.page || s.page.url !== m.url) return s;
+      return { ...s, page: { ...s.page, loading: false, error: m.msg } };
     default:
       return s;
   }

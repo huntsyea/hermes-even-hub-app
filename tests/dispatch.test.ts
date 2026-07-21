@@ -79,8 +79,12 @@ describe("dispatch: session idle", () => {
     expect(r.state.scrollPage).toBeNull();
     expect(r.effects).toEqual([{ kind: "startMic" }]);
   });
-  it("double-press returns to the list", () => {
-    const r = dispatch(session("idle"), "doubleClick");
+  it("double-press opens the action menu; sessions row reaches the list", () => {
+    const menu = dispatch(session("idle"), "doubleClick");
+    expect(menu.state.screen).toBe("menu");
+    expect(menu.effects).toEqual([]);
+    // No links in this session → rows are [back, speak, sessions].
+    const r = dispatch(menu.state, "click", 2);
     expect(r.state.screen).toBe("list");
     expect(r.effects).toEqual([{ kind: "send", frame: sessionsList() }]);
   });
@@ -160,17 +164,26 @@ describe("dispatch: session idle scrolling", () => {
     expect(r.state.scrollPage).toBe(pages.length - 2);
     expect(r.effects).toEqual([]);
   });
-  it("scrollUp clamps at the first viewport", () => {
+  it("scrollUp at the first viewport wraps to the live tail", () => {
     const r = dispatch({ ...longSession(), scrollPage: 0 }, "scrollUp");
-    expect(r.state.scrollPage).toBe(0);
+    expect(r.state.scrollPage).toBeNull();
   });
   it("scrollDown to the latest viewport resumes follow (null)", () => {
     const pages = threadPages(longSession().stream);
     const r = dispatch({ ...longSession(), scrollPage: pages.length - 2 }, "scrollDown");
     expect(r.state.scrollPage).toBeNull();
   });
-  it("scrollDown while already following is a no-op", () => {
+  it("scrollDown while already following wraps to the first viewport", () => {
     const r = dispatch({ ...longSession(), scrollPage: null }, "scrollDown");
+    expect(r.state.scrollPage).toBe(0);
+  });
+  it("scrollDown while following a single-page stream is a no-op", () => {
+    const s: AppState = {
+      ...initialState(), screen: "session", phase: "idle",
+      stream: [{ kind: "user", text: "hi" }],
+      scrollPage: null,
+    };
+    const r = dispatch(s, "scrollDown");
     expect(r.state.scrollPage).toBeNull();
   });
   it("scrollUp on a single-page stream stays in follow mode (no-op)", () => {

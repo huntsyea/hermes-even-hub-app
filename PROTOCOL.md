@@ -18,6 +18,7 @@ Discriminator field: `t` (string, required on every frame)
 | `stop`            | _(none)_                            | Interrupt the active assistant turn. |
 | `audio.start`     | _(none)_                            | Begin streaming PCM audio (see Binary Frames below). |
 | `audio.stop`      | _(none)_                            | End PCM audio stream. |
+| `page.open`       | `url: string`                       | Ask the bridge to fetch a web page (http/https) for the glasses page viewer. |
 
 ---
 
@@ -34,6 +35,8 @@ Discriminator field: `t` (string, required on every frame)
 | `tool.start` | `name: string`, `label?: string`, `emoji?: string`              | A tool invocation has started. `label` and `emoji` are optional and omitted from the frame when empty. |
 | `tool.end`   | `name: string`, `ok: boolean`                                   | A tool invocation completed. `ok=false` indicates failure. |
 | `turn.done`  | _(none)_                                                        | The assistant turn is complete; no further `assistant` or `tool.*` frames will arrive for this turn. |
+| `page.data`  | `url: string`, `title: string`, `text: string`, `images: PageImage[]`, `links: PageLink[]` | Reduced web page for the viewer: main text (≤3000 chars), up to 3 greyscale images (`{data: base64 PNG ≤288×144, width, height}`), and up to 19 in-page links (`{url, label}`). |
+| `page.error` | `url: string`, `msg: string`                                    | The page fetch for `url` failed. |
 | `error`      | `msg: string`                                                   | An error occurred on the server side. |
 
 ### `SessionItem` shape

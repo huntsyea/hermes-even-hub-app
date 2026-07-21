@@ -7,3 +7,6 @@ dist/
 
 # local simulator debug captures
 docs/e2e/*.png
+
+# local sideload QR artifacts
+sideload-qr*.png
