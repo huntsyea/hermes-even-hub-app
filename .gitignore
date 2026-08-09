@@ -10,3 +10,4 @@ docs/e2e/*.png
 
 # local sideload QR artifacts
 sideload-qr*.png
+serve_app.pyw

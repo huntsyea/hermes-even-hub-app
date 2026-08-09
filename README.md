@@ -83,15 +83,43 @@ to the session list; you open or create a session, then drive it by voice:
 tap to record, tap to stop, review the transcript, tap to send.
 
 States: `list → session(idle) → recording → transcribing → review → idle`.
+Two extra screens hang off a session: the **action menu** (double-press) and, through
+it, the **link picker** → **page viewer**.
 
 ### Gesture Map
 
 | State | Swipe ↑/↓ | Tap | Double-press |
 |-------|-----------|-----|--------------|
 | **List** | scroll sessions | open highlighted row / `＋New` | **exit app** (system dialog) |
-| **Session · idle** | scroll chat history | **start recording** | back to list |
+| **Session · idle** | scroll chat history (wraps around) | **start recording** | **open action menu** |
 | **Session · recording** | — | **stop → transcribe → review** | cancel recording → idle |
 | **Session · review** | ↓ = **redo** (discard, re-arm) | **send** to Hermes | back to list (discard) |
+| **Menu** | scroll rows | run the highlighted action | back to session |
+| **Links** | scroll links | open the link in the page viewer | back to session list |
+| **Page** | page through text/images (wraps around) | open this page's links | back (history, then session) |
+
+Chat scrolling is cyclic: swiping past the newest viewport wraps to the oldest and
+vice versa, so a long thread is reachable from either direction.
+
+### Action menu
+
+Double-pressing in a session opens a stable list instead of jumping somewhere that
+depends on what the assistant happened to say:
+
+| Row | Action |
+|-----|--------|
+| `← back` | return to the session |
+| `🎤 Speak` | start recording (same as tap) |
+| `🔗 Links (N)` | link picker — only shown when the thread contains links |
+| `📚 Sessions` | the session list |
+
+### Link picker & page viewer
+
+Picking a link sends `page.open` to the bridge, which returns the page reduced for the
+display: main-content text plus up to three greyscale images (placed right after the
+first text page so they are one or two swipes away, not buried). Tapping inside the
+viewer opens that page's own links, and double-press walks the back-history one page at
+a time before returning to the session.
 
 ### Session screen
 
