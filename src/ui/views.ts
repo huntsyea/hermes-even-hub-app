@@ -25,9 +25,9 @@ export async function renderList(bridge: EvenAppBridge, s: AppState): Promise<vo
 
 export function loadingText(s: AppState): string {
   const status = s.conn === "connected"
-    ? "waiting for session list"
+    ? "waiting for data"
     : s.conn;
-  return `loading sessions...\n${status}`;
+  return `⟳ establishing link…\n  ${status}`;
 }
 
 export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise<void> {
@@ -37,9 +37,9 @@ export async function renderSession(bridge: EvenAppBridge, s: AppState): Promise
   await setText(bridge, IDS.dot, connDot(s.conn));
 
   const body = isHistoryLoading(s)
-    ? "loading session..."
+    ? "⟳ loading…"
     : displayThreadItems(s).length === 0
-      ? "tap to speak"
+      ? "› awaiting input\n  tap to speak"
       : threadViewportText(s);
   await setText(bridge, IDS.body, body);
 

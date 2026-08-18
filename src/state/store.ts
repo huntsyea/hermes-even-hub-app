@@ -129,27 +129,27 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
 
 export function barText(s: AppState): string {
   switch (s.phase) {
-    case "recording": return "🎤 recording…";
-    case "transcribing": return "transcribing…";
-    case "review": return "tap = send · swipe↓ = redo";
+    case "recording": return "● REC ‹ tap to stop";
+    case "transcribing": return "⟳ processing audio…";
+    case "review": return "✓ send ‹ ↻ redo";
     case "idle":
     default: {
-      if (isHistoryLoading(s)) return "loading session...";
-      if (isHistoryUnavailable(s)) return "history unavailable";
+      if (isHistoryLoading(s)) return "⟳ loading…";
+      if (isHistoryUnavailable(s)) return "✗ history unavailable";
       if (s.turn === "working") {
         for (let i = s.stream.length - 1; i >= 0; i--) {
           const it = s.stream[i];
-          if (it.kind === "tool" && it.running) return `working… (${it.name})`;
+          if (it.kind === "tool" && it.running) return `⟳ ${it.name}…`;
         }
-        return "working…";
+        return "⟳ processing…";
       }
-      return s.turn === "thinking" ? "thinking…" : "ready";
+      return s.turn === "thinking" ? "⟳ thinking…" : "✓ ready ‹ tap to speak";
     }
   }
 }
 
 export function connDot(conn: string): string {
-  return conn === "connected" ? "●" : "◌";
+  return conn === "connected" ? "●" : "○";
 }
 
 export function isHistoryLoading(s: AppState): boolean {

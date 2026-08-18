@@ -16,14 +16,14 @@ export const NAMES: Record<number, string> = {
 // re-entering a session uses rebuildPageContainer with these 4 text containers.
 function chatTextObjects(): TextContainerProperty[] {
   return [
-    new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0,   yPosition: 0,   width: 540, height: 40,  paddingLength: 4, content: "Hermes" }),
-    new TextContainerProperty({ containerID: IDS.dot,    containerName: "dot",    xPosition: 540, yPosition: 0,   width: 36,  height: 40,  paddingLength: 4, content: "◌" }),
+    new TextContainerProperty({ containerID: IDS.header, containerName: "header", xPosition: 0,   yPosition: 0,   width: 500, height: 40,  paddingLength: 4, content: "◈ HERMES" }),
+    new TextContainerProperty({ containerID: IDS.dot,    containerName: "dot",    xPosition: 500, yPosition: 0,   width: 76,  height: 40,  paddingLength: 4, content: "○" }),
     new TextContainerProperty({ containerID: IDS.body,   containerName: "body",   xPosition: 0,   yPosition: 44,  width: 576, height: 200, paddingLength: 4, content: "", isEventCapture: 1 }),
-    new TextContainerProperty({ containerID: IDS.status, containerName: "status", xPosition: 0,   yPosition: 248, width: 576, height: 36,  paddingLength: 4, content: "connecting…" }),
+    new TextContainerProperty({ containerID: IDS.status, containerName: "status", xPosition: 0,   yPosition: 248, width: 576, height: 36,  paddingLength: 4, content: "› initializing…" }),
   ];
 }
 
-function loadingTextObject(content = "loading sessions...\nconnecting bridge"): TextContainerProperty[] {
+function loadingTextObject(content = "⟳ establishing link…\n  initializing systems"): TextContainerProperty[] {
   return [
     new TextContainerProperty({
       containerID: IDS.body,
@@ -94,7 +94,7 @@ export async function createSetupStartup(bridge: EvenAppBridge): Promise<void> {
         height: 288,
         paddingLength: 12,
         isEventCapture: 1,
-        content: "Open phone app\nto configure bridge.",
+        content: "› Open phone app\n  to configure bridge.",
       }),
     ],
   }));

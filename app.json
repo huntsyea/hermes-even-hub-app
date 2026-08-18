@@ -1,21 +1,19 @@
 {
-  "package_id": "com.huntsyea.evendev",
+  "package_id": "com.kunaldas.hermesg2",
   "edition": "202601",
-  "name": "Even Dev",
-  "version": "0.2.13",
+  "name": "Hermes Agent",
+  "version": "0.0.2",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.10",
   "entrypoint": "index.html",
   "permissions": [
     {
       "name": "network",
-      "desc": "Connect to local Hermes bridge",
+      "desc": "Connect to Hermes bridge via Tailscale",
       "whitelist": [
         "https://*.ts.net",
         "wss://*.ts.net",
-        "https://*.tail587d25.ts.net",
-        "wss://*.tail587d25.ts.net",
-        "wss://hunters-mini.tail587d25.ts.net:8443"
+        "wss://hermes-gcp.tail92d2c8.ts.net:8443"
       ]
     },
     { "name": "g2-microphone", "desc": "Voice input for Hermes agent" }

@@ -3,8 +3,6 @@ import { getTextWidth, measureTextWrap } from "@evenrealities/pretext";
 
 // 26 box-drawing chars = 520px; body usable width is 568px (one ─ = 20px,
 // measured via @evenrealities/pretext). 40 chars (800px) wrapped to 2 lines.
-const RULE = "─".repeat(26);
-
 export const THREAD_BODY = {
   width: 576,
   height: 200,
@@ -27,14 +25,15 @@ export interface ThreadViewport {
 }
 
 function renderItem(it: StreamItem): string {
-  if (it.kind === "user") return `> ${it.text}`;
+  if (it.kind === "user") return `▸ ${it.text}`;
   if (it.kind === "tool") {
     const label = it.label?.trim() || it.name;
-    return `/ ${label}${it.running ? "" : it.ok === false ? " fail" : " ok"}`;
+    const status = it.running ? "⟳" : it.ok === false ? "✗" : "✓";
+    return `  ◇ ${label} ${status}`;
   }
   if (it.kind === "banner") {
-    const body = it.text.split("\n").map((l) => ` ${l}`).join("\n");
-    return `${RULE}\n${body}\n${RULE}`;
+    const body = it.text.split("\n").map((l) => `  ${l}`).join("\n");
+    return `▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔\n${body}\n▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁`;
   }
   return it.text; // assistant
 }

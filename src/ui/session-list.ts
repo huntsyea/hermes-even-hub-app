@@ -1,8 +1,8 @@
 import { getTextWidth } from "@evenrealities/pretext";
 import type { SessionItem } from "../protocol";
 
-export const NEW_SESSION_ROW = "＋ New session";
-export const LOADING_SESSIONS_ROW = "loading sessions...";
+export const NEW_SESSION_ROW = "✦ New session";
+export const LOADING_SESSIONS_ROW = "⟳ loading…";
 
 const LIST_ROW_WIDTH_PX = 576;
 const SESSION_HEADER_WIDTH_PX = 540;
@@ -67,7 +67,7 @@ export function sessionListRows(
 }
 
 function formatSessionRow(item: SessionItem, active: string | null, nowSeconds: number): string {
-  const marker = item.id === active ? "●" : " ";
+  const marker = item.id === active ? "▣" : " ";
   const prefix = `${marker} ${compactAge(item.updated, nowSeconds)} `;
   const title = truncateTitle(
     sessionRowTitle(item),
