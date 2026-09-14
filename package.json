@@ -26,7 +26,7 @@
     "vitest": "^4.1.7"
   },
   "dependencies": {
-    "@evenrealities/even_hub_sdk": "^0.0.10",
+    "@evenrealities/even_hub_sdk": "^0.0.14",
     "@evenrealities/pretext": "^0.1.4"
   }
 }
