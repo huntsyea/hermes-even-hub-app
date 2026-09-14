@@ -76,6 +76,46 @@ export function nextThreadViewportCursor(items: StreamItem[], scrollPage: number
   return next >= viewports.length - 1 ? null : next;
 }
 
+/**
+ * The SDK rejects text over ~999 bytes on `rebuildPageContainer` and
+ * `textContainerUpgrade`, and it fails SILENTLY — it resolves `false`, throws
+ * nothing, logs nothing, and the screen simply does not update. That is
+ * indistinguishable from a stale render, which is what makes it expensive to
+ * diagnose.
+ *
+ * Wrapping here is by PIXEL width, which does not bound UTF-8 byte length: a
+ * viewport of non-ASCII text can be correctly sized on screen and still bust the
+ * budget. Any assistant reply containing CJK, Cyrillic or accented text can hit
+ * it, and when it does the thread stops updating with no error anywhere.
+ */
+export const VIEWPORT_BYTE_BUDGET = 960;
+const utf8 = new TextEncoder();
+
+export function byteLength(text: string): number {
+  return utf8.encode(text).length;
+}
+
+/** Trim one line to a byte budget without splitting a UTF-8 sequence. */
+function clampLineBytes(line: string, maxBytes: number): string {
+  if (byteLength(line) <= maxBytes) return line;
+  const chars = Array.from(line);
+  while (chars.length && byteLength(chars.join("") + "…") > maxBytes) chars.pop();
+  return chars.join("") + "…";
+}
+
+/**
+ * Fit lines into the budget, dropping from the FRONT so the newest text
+ * survives — and capping each surviving line too, because a single unwrapped
+ * line can exceed the budget on its own, which a drop-from-front loop alone
+ * would still ship.
+ */
+export function clampToBudget(lines: string[], maxBytes = VIEWPORT_BYTE_BUDGET): string {
+  const capped = lines.map((l) => clampLineBytes(l, maxBytes));
+  let start = 0;
+  while (start < capped.length - 1 && byteLength(capped.slice(start).join("\n")) > maxBytes) start++;
+  return capped.slice(start).join("\n");
+}
+
 function viewportsForText(text: string): ThreadViewport[] {
   const lines = wrapTextLines(text);
   const starts = viewportStarts(lines.length);
@@ -87,7 +127,7 @@ function viewportsForText(text: string): ThreadViewport[] {
       total,
       startLine,
       endLine,
-      content: lines.slice(startLine, endLine).join("\n"),
+      content: clampToBudget(lines.slice(startLine, endLine)),
     };
   });
 }

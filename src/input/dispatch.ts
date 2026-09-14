@@ -20,15 +20,29 @@ const enterSession = (s: AppState, active: string | null): AppState => ({
   sessions: { ...s.sessions, active },
 });
 
-export function dispatch(s: AppState, g: Gesture, index?: number): DispatchResult {
+/**
+ * The session ids of the rows currently DISPLAYED, captured at render time.
+ * `ids[i]` is the session for row `i`, or null for the ＋New row.
+ *
+ * A tap arrives as an index into what is on screen, and the list re-sorts by
+ * recency whenever a `sessions` frame lands — so the index has to be resolved
+ * against the snapshot the wearer was looking at, not against live state.
+ */
+export interface ListSnapshot {
+  ids: (string | null)[];
+}
+
+export function dispatch(s: AppState, g: Gesture, index?: number, shown?: ListSnapshot): DispatchResult {
   if (s.screen === "list") {
     if (!s.sessionsLoaded) return { state: s, effects: [] };
     if (g === "click") {
       const i = index ?? 0; // proto3 omits index 0 → undefined means the ＋New row
       if (i === 0) return { state: enterSession(s, null), effects: [{ kind: "send", frame: sessionsNew() }] };
-      const item = sessionForListIndex(s.sessions.items, i);
-      if (!item) return { state: s, effects: [] };
-      return { state: enterSession(s, item.id), effects: [{ kind: "send", frame: sessionsSwitch(item.id) }] };
+      // Falls back to live state when no snapshot is supplied, so existing
+      // callers keep their current behaviour.
+      const id = shown ? shown.ids[i] ?? null : sessionForListIndex(s.sessions.items, i)?.id ?? null;
+      if (!id) return { state: s, effects: [] };
+      return { state: enterSession(s, id), effects: [{ kind: "send", frame: sessionsSwitch(id) }] };
     }
     if (g === "doubleClick") return { state: s, effects: [{ kind: "exit" }] };
     return { state: s, effects: [] };

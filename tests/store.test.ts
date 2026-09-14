@@ -222,7 +222,7 @@ describe("reduce: transcript guard", () => {
 describe("barText", () => {
   const base = { ...initialState(), screen: "session" as const };
   it("recording / transcribing / review", () => {
-    expect(barText({ ...base, phase: "recording" })).toBe("🎤 recording…");
+    expect(barText({ ...base, phase: "recording" })).toBe("● recording · tap to stop");
     expect(barText({ ...base, phase: "transcribing" })).toBe("transcribing…");
     expect(barText({ ...base, phase: "review" })).toBe("tap = send · swipe↓ = redo");
   });
@@ -249,5 +249,17 @@ describe("connDot", () => {
   it("filled when connected, hollow otherwise", () => {
     expect(connDot("connected")).toBe("●");
     expect(connDot("reconnecting")).toBe("◌");
+  });
+});
+
+describe("glyphs the firmware can actually render", () => {
+  // Unknown glyphs are dropped SILENTLY — no error, no placeholder, just a gap.
+  // The mic emoji in the recording bar rendered as nothing at all.
+  it("no bar string contains an emoji", () => {
+    const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u;
+    const base = initialState();
+    for (const phase of ["idle", "recording", "transcribing", "review"] as const) {
+      expect(barText({ ...base, phase })).not.toMatch(emoji);
+    }
   });
 });
