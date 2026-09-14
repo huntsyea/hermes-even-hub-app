@@ -129,7 +129,10 @@ export function reduce(s: AppState, m: ServerMsg): AppState {
 
 export function barText(s: AppState): string {
   switch (s.phase) {
-    case "recording": return "🎤 recording…";
+    // NOT an emoji. The firmware font has none and drops them SILENTLY, so this
+    // rendered as a stray leading space and a bare word — on the one state that
+    // most needs to be unmistakable at a glance. `●` is in the font.
+    case "recording": return "● recording · tap to stop";
     case "transcribing": return "transcribing…";
     case "review": return "tap = send · swipe↓ = redo";
     case "idle":

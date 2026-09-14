@@ -3,6 +3,7 @@ import { dispatch } from "../src/input/dispatch";
 import { initialState, type AppState } from "../src/state/store";
 import { sessionsNew, sessionsSwitch, textMsg, sessionsList } from "../src/protocol";
 import { threadPages } from "../src/ui/stream";
+import { buildListView } from "../src/ui/views";
 
 function listWith(items: { id: string; title: string; updated?: number }[]): AppState {
   return {
@@ -180,5 +181,34 @@ describe("dispatch: session idle scrolling", () => {
     };
     const r = dispatch(s, "scrollUp");
     expect(r.state.scrollPage).toBeNull();
+  });
+});
+
+describe("a tap resolves against the rows on screen", () => {
+  // The glasses report a tap as an INDEX into what they are displaying, and the
+  // list re-sorts by recency whenever a `sessions` frame lands. Resolving that
+  // index against live state opens whatever moved into the slot.
+  it("opens the row the wearer touched, even after the list re-sorts", () => {
+    const before = listWith([
+      { id: "a", title: "A", updated: 200 },
+      { id: "b", title: "B", updated: 100 },
+    ]);
+    const shown = buildListView(before);
+    expect(shown.ids).toEqual([null, "a", "b"]);
+
+    // A `sessions` frame lands and B is now the most recent.
+    const after = listWith([
+      { id: "a", title: "A", updated: 200 },
+      { id: "b", title: "B", updated: 300 },
+    ]);
+
+    // Row 1 still shows A on screen.
+    expect(dispatch(after, "click", 1, shown).effects).toEqual([
+      { kind: "send", frame: sessionsSwitch("a") },
+    ]);
+    // Without the snapshot it resolves against live state and opens B.
+    expect(dispatch(after, "click", 1).effects).toEqual([
+      { kind: "send", frame: sessionsSwitch("b") },
+    ]);
   });
 });

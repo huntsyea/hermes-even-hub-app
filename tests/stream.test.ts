@@ -3,6 +3,9 @@ import { getTextWidth } from "@evenrealities/pretext";
 import {
   THREAD_BODY_INNER_WIDTH,
   THREAD_VIEWPORT_LINES,
+  VIEWPORT_BYTE_BUDGET,
+  byteLength,
+  clampToBudget,
   currentThreadViewport,
   nextThreadViewportCursor,
   previousThreadViewportIndex,
@@ -103,5 +106,28 @@ describe("banner divider", () => {
     for (const line of out.split("\n")) {
       expect(getTextWidth(line)).toBeLessThanOrEqual(BODY_INNER_PX);
     }
+  });
+});
+
+describe("the SDK's silent byte limit", () => {
+  // rebuildPageContainer and textContainerUpgrade reject content over ~999
+  // bytes by resolving false — no throw, no log, the screen just does not
+  // change. Wrapping is by pixel width, which does not bound UTF-8 length.
+  it("keeps every viewport under the budget for wide non-ASCII text", () => {
+    const stream = [{ kind: "assistant" as const, text: "日本語のとても長い返事。".repeat(60) }];
+    for (const page of threadPages(stream)) {
+      expect(byteLength(page)).toBeLessThanOrEqual(VIEWPORT_BYTE_BUDGET);
+    }
+  });
+
+  it("caps a single oversized line, not just the joined total", () => {
+    expect(byteLength(clampToBudget(["x".repeat(5_000)]))).toBeLessThanOrEqual(VIEWPORT_BYTE_BUDGET);
+  });
+
+  it("drops from the front so the newest text survives", () => {
+    const lines = Array.from({ length: 40 }, (_, i) => `line ${i} ${"y".repeat(60)}`);
+    const out = clampToBudget(lines);
+    expect(out).toContain("line 39");
+    expect(out).not.toContain("line 0 ");
   });
 });
